@@ -1,0 +1,202 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/button'
+import Logo from '@/components/Logo'
+import {
+  Home,
+  BookOpen,
+  Users,
+  Settings,
+  BarChart3,
+  FileText,
+  MessageSquare,
+  CreditCard,
+  LogOut,
+  Menu,
+  X,
+  User,
+  Shield,
+  GraduationCap,
+  LayoutDashboard,
+} from 'lucide-react'
+import { useState } from 'react'
+
+interface NavItem {
+  label: string
+  href: string
+  icon: React.ElementType
+}
+
+const superAdminMenu: NavItem[] = [
+  { label: 'Overview', href: '/dashboard/super-admin', icon: LayoutDashboard },
+  { label: 'User Management', href: '/dashboard/super-admin/users', icon: Users },
+  { label: 'Role Permissions', href: '/dashboard/super-admin/roles', icon: Shield },
+  { label: 'System Settings', href: '/dashboard/super-admin/settings', icon: Settings },
+  { label: 'Analytics', href: '/dashboard/super-admin/analytics', icon: BarChart3 },
+  { label: 'Audit Logs', href: '/dashboard/super-admin/logs', icon: FileText },
+]
+
+const adminMenu: NavItem[] = [
+  { label: 'Overview', href: '/dashboard/admin', icon: LayoutDashboard },
+  { label: 'Manage Courses', href: '/dashboard/admin/courses', icon: BookOpen },
+  { label: 'Manage Instructors', href: '/dashboard/admin/instructors', icon: Users },
+  { label: 'Student Management', href: '/dashboard/admin/students', icon: GraduationCap },
+  { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
+  { label: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
+]
+
+const instructorMenu: NavItem[] = [
+  { label: 'Overview', href: '/dashboard/instructor', icon: LayoutDashboard },
+  { label: 'My Courses', href: '/dashboard/instructor/courses', icon: BookOpen },
+  { label: 'Create Course', href: '/dashboard/instructor/create', icon: FileText },
+  { label: 'Students', href: '/dashboard/instructor/students', icon: Users },
+  { label: 'Analytics', href: '/dashboard/instructor/analytics', icon: BarChart3 },
+  { label: 'Messages', href: '/dashboard/instructor/messages', icon: MessageSquare },
+]
+
+const studentMenu: NavItem[] = [
+  { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'My Courses', href: '/dashboard/courses', icon: BookOpen },
+  { label: 'Enrolled', href: '/dashboard/enrolled', icon: GraduationCap },
+  { label: 'Certificates', href: '/dashboard/certificates', icon: FileText },
+  { label: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+  { label: 'Profile', href: '/dashboard/profile', icon: User },
+]
+
+interface DashboardLayoutProps {
+  children: React.ReactNode
+}
+
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user, logout } = useAuth()
+  const pathname = usePathname()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const getMenu = (): NavItem[] => {
+    switch (user?.role) {
+      case 'super_admin':
+        return superAdminMenu
+      case 'admin':
+        return adminMenu
+      case 'instructor':
+        return instructorMenu
+      case 'student':
+        return studentMenu
+      default:
+        return []
+    }
+  }
+
+  const menuItems = getMenu()
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white border-b sticky top-0 z-40">
+        <div className="flex items-center justify-between p-4">
+          <Link href="/" className="flex items-center">
+            <Logo className="h-8 w-auto" />
+          </Link>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+          <div className="bg-white w-64 h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b">
+              <Logo className="h-8 w-auto" />
+            </div>
+            <nav className="p-4 space-y-2">
+              {menuItems.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-primary text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </Link>
+                )
+              })}
+            </nav>
+            <div className="p-4 border-t">
+              <Button variant="outline" className="w-full" onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" /> Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex">
+        <aside className="w-64 bg-white border-r h-screen sticky top-0 overflow-y-auto">
+          <div className="p-6 border-b">
+            <Link href="/" className="flex items-center">
+              <Logo className="h-10 w-auto" />
+            </Link>
+          </div>
+
+          <nav className="p-4 space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-primary text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              )
+            })}
+          </nav>
+
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+            <div className="mb-4 px-4">
+              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+              <p className="text-xs text-gray-500 capitalize">{user?.role?.replace('_', ' ')}</p>
+            </div>
+            <Button variant="outline" className="w-full" onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" /> Sign Out
+            </Button>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+
+      {/* Mobile Main Content */}
+      <div className="lg:hidden">
+        {children}
+      </div>
+    </div>
+  )
+}
