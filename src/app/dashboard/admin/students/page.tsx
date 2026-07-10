@@ -1,11 +1,12 @@
 'use client'
 
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { GraduationCap, Mail } from 'lucide-react'
+import { GraduationCap, Mail, Eye } from 'lucide-react'
 import { getAllUsers } from '@/lib/users'
 
 function AdminStudentsPage() {
@@ -36,7 +37,11 @@ function AdminStudentsPage() {
                 <tbody>
                   {students.map((student) => (
                     <tr key={student.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{student.name}</td>
+                      <td className="py-3 px-4">
+                        <Link href={`/dashboard/admin/students/${student.id}`} className="font-medium text-primary hover:underline">
+                          {student.name}
+                        </Link>
+                      </td>
                       <td className="py-3 px-4 text-gray-600">{student.email}</td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -46,9 +51,16 @@ function AdminStudentsPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <Button size="sm" variant="outline">
-                          <Mail className="h-4 w-4 mr-2" /> Contact
-                        </Button>
+                        <div className="flex gap-2">
+                          <Link href={`/dashboard/admin/students/${student.id}`}>
+                            <Button size="sm" variant="outline" title="View Profile">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button size="sm" variant="outline" title="Contact">
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

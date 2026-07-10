@@ -1,18 +1,61 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getAllUsers, updateUserRole, deactivateUser, activateUser, UserRole } from '@/lib/users'
-import { Users, UserPlus, CheckCircle, XCircle, BookOpen, TrendingUp, DollarSign } from 'lucide-react'
+import { Users, UserPlus, CheckCircle, XCircle, BookOpen, TrendingUp, DollarSign, Loader2, Activity, Clock, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
+
+interface SuperAdminStats {
+  totalUsers: number
+  activeUsers: number
+  totalCourses: number
+  activeCourses: number
+  totalRevenue: number
+  monthlyRevenue: number
+  totalEnrollments: number
+  completionRate: number
+  newStudentsThisMonth: number
+  newInstructorsThisMonth: number
+  totalAdmins: number
+  systemUptime: number
+  pendingApprovals: number
+}
 
 function SuperAdminDashboard() {
   const { user } = useAuth()
   const [users, setUsers] = useState(getAllUsers())
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all')
+  const [stats, setStats] = useState<SuperAdminStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchStats()
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchStats, 30000)
+    
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchStats = async () => {
+    try {
+      if (!loading) setLoading(true)
+      const response = await fetch('/api/analytics/dashboard?role=super_admin')
+      const result = await response.json()
+      if (result.success) {
+        setStats(result.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredUsers = selectedRole === 'all' ? users : users.filter(u => u.role === selectedRole)
 
@@ -30,81 +73,107 @@ function SuperAdminDashboard() {
     setUsers(getAllUsers())
   }
 
-  const stats = {
-    totalUsers: users.length,
-    superAdmins: users.filter(u => u.role === 'super_admin').length,
-    admins: users.filter(u => u.role === 'admin').length,
-    instructors: users.filter(u => u.role === 'instructor').length,
-    students: users.filter(u => u.role === 'student').length,
-    activeUsers: users.filter(u => u.isActive).length,
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount)
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
     <DashboardLayout>
       <div className="p-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Super Admin Dashboard</h1>
-          <p className="text-gray-600">Welcome, {user?.name}! Full system control and user management.</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Super Admin Dashboard</h1>
+            <p className="text-gray-600">Welcome, {user?.name}! Full system control and user management.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={fetchStats} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Users</p>
-                  <p className="text-2xl font-bold">{stats.totalUsers}</p>
+          <Link href="/dashboard/super-admin/users">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Total Users</p>
+                    <p className="text-2xl font-bold">{stats?.totalUsers || 0}</p>
+                    <p className="text-xs text-green-600 mt-1">+{stats?.newStudentsThisMonth || 0} this month</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
                 </div>
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Active Users</p>
-                  <p className="text-2xl font-bold">{stats.activeUsers}</p>
+          <Link href="/dashboard/super-admin/users">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Active Users</p>
+                    <p className="text-2xl font-bold">{stats?.activeUsers || 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">{stats?.totalUsers ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}% active</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
+                    <Activity className="h-6 w-6 text-green-600" />
+                  </div>
                 </div>
-                <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Instructors</p>
-                  <p className="text-2xl font-bold">{stats.instructors}</p>
+          <Link href="/dashboard/super-admin/analytics">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+                    <p className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</p>
+                    <p className="text-xs text-green-600 mt-1">+{formatCurrency(stats?.monthlyRevenue || 0)} this month</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-blue-600" />
+                  </div>
                 </div>
-                <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-                  <BookOpen className="h-6 w-6 text-secondary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Students</p>
-                  <p className="text-2xl font-bold">{stats.students}</p>
+          <Link href="/dashboard/super-admin/settings">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">System Uptime</p>
+                    <p className="text-2xl font-bold">{stats?.systemUptime || 0}%</p>
+                    <p className="text-xs text-gray-500 mt-1">{stats?.pendingApprovals || 0} pending approvals</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-purple-600" />
+                  </div>
                 </div>
-                <div className="h-12 w-12 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-accent" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* User Management */}

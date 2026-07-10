@@ -1,19 +1,29 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getAllUsers, updateUserRole, deactivateUser, activateUser, UserRole } from '@/lib/users'
-import { UserPlus, CheckCircle, XCircle, Search } from 'lucide-react'
+import { UserPlus, CheckCircle, XCircle, Search, Eye, Save, AlertCircle } from 'lucide-react'
+
+interface PendingChange {
+  userId: string
+  userName: string
+  oldRole: UserRole
+  newRole: UserRole
+}
 
 function UserManagementPage() {
   const { user } = useAuth()
   const [users, setUsers] = useState(getAllUsers())
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all')
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -23,8 +33,62 @@ function UserManagementPage() {
   })
 
   const handleRoleChange = (userId: string, newRole: UserRole) => {
-    updateUserRole(userId, newRole)
+    const currentUser = users.find(u => u.id === userId)
+    if (!currentUser || currentUser.role === newRole) return
+
+    // Add to pending changes
+    const existingChangeIndex = pendingChanges.findIndex(c => c.userId === userId)
+    if (existingChangeIndex >= 0) {
+      // Update existing change
+      const updatedChanges = [...pendingChanges]
+      updatedChanges[existingChangeIndex] = {
+        userId,
+        userName: currentUser.name,
+        oldRole: updatedChanges[existingChangeIndex].oldRole,
+        newRole,
+      }
+      setPendingChanges(updatedChanges)
+    } else {
+      // Add new change
+      setPendingChanges([
+        ...pendingChanges,
+        {
+          userId,
+          userName: currentUser.name,
+          oldRole: currentUser.role,
+          newRole,
+        },
+      ])
+    }
+
+    // Update local state for immediate UI feedback
+    setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u))
+  }
+
+  const handleSaveChanges = () => {
+    // Apply all pending changes
+    pendingChanges.forEach(change => {
+      updateUserRole(change.userId, change.newRole)
+    })
+    
+    // Clear pending changes
+    setPendingChanges([])
+    
+    // Refresh user list
     setUsers(getAllUsers())
+    
+    // Show success message
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 3000)
+  }
+
+  const cancelPendingChange = (userId: string) => {
+    const change = pendingChanges.find(c => c.userId === userId)
+    if (change) {
+      // Revert to old role
+      setUsers(users.map(u => u.id === userId ? { ...u, role: change.oldRole } : u))
+      setPendingChanges(pendingChanges.filter(c => c.userId !== userId))
+    }
   }
 
   const handleToggleActive = (userId: string, isActive: boolean) => {
@@ -43,6 +107,54 @@ function UserManagementPage() {
           <h1 className="text-3xl font-bold mb-2">User Management</h1>
           <p className="text-gray-600">Manage all users, roles, and permissions.</p>
         </div>
+
+        {/* Success Message */}
+        {showSuccess && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-green-800 font-medium">Role changes saved successfully!</span>
+          </div>
+        )}
+
+        {/* Pending Changes Alert */}
+        {pendingChanges.length > 0 && (
+          <Card className="mb-6 border-yellow-300 bg-yellow-50">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-yellow-900 mb-2">
+                    {pendingChanges.length} Pending Change{pendingChanges.length > 1 ? 's' : ''}
+                  </h4>
+                  <ul className="space-y-1 mb-3">
+                    {pendingChanges.map(change => (
+                      <li key={change.userId} className="text-sm text-yellow-800">
+                        <strong>{change.userName}</strong>: {change.oldRole.replace('_', ' ')} → {change.newRole.replace('_', ' ')}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveChanges} size="sm">
+                      <Save className="mr-2 h-4 w-4" /> Save All Changes
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        pendingChanges.forEach(change => {
+                          setUsers(users.map(u => u.id === change.userId ? { ...u, role: change.oldRole } : u))
+                        })
+                        setPendingChanges([])
+                      }}
+                    >
+                      Cancel All
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
         <Card className="mb-6">
@@ -93,20 +205,39 @@ function UserManagementPage() {
                 <tbody>
                   {filteredUsers.map((u) => (
                     <tr key={u.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{u.name}</td>
+                      <td className="py-3 px-4">
+                        <Link href={`/dashboard/super-admin/users/${u.id}`} className="font-medium text-primary hover:underline">
+                          {u.name}
+                        </Link>
+                      </td>
                       <td className="py-3 px-4 text-gray-600">{u.email}</td>
                       <td className="py-3 px-4">
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
-                          className="px-2 py-1 border rounded text-sm"
-                          disabled={u.id === user?.id}
-                        >
-                          <option value="super_admin">Super Admin</option>
-                          <option value="admin">Admin</option>
-                          <option value="instructor">Instructor</option>
-                          <option value="student">Student</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
+                            className={`px-2 py-1 border rounded text-sm ${
+                              pendingChanges.some(c => c.userId === u.id) ? 'border-yellow-500 bg-yellow-50' : ''
+                            }`}
+                            disabled={u.id === user?.id}
+                          >
+                            <option value="super_admin">Super Admin</option>
+                            <option value="admin">Admin</option>
+                            <option value="instructor">Instructor</option>
+                            <option value="student">Student</option>
+                          </select>
+                          {pendingChanges.some(c => c.userId === u.id) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => cancelPendingChange(u.id)}
+                              title="Cancel change"
+                              className="h-6 w-6 p-0"
+                            >
+                              <XCircle className="h-4 w-4 text-yellow-600" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -116,14 +247,22 @@ function UserManagementPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleToggleActive(u.id, u.isActive)}
-                          disabled={u.id === user?.id}
-                        >
-                          {u.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Link href={`/dashboard/super-admin/users/${u.id}`}>
+                            <Button size="sm" variant="outline" title="View Profile">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleToggleActive(u.id, u.isActive)}
+                            disabled={u.id === user?.id}
+                            title={u.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            {u.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

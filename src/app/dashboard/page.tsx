@@ -23,7 +23,8 @@ function DashboardRedirect() {
           router.push('/dashboard/instructor')
           break
         case 'student':
-          // Keep student on /dashboard (existing student dashboard)
+          // Redirect student to their courses overview
+          router.push('/dashboard/courses')
           break
         default:
           router.push('/dashboard')

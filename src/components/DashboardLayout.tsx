@@ -116,6 +116,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="p-4 border-b">
               <Logo className="h-8 w-auto" />
             </div>
+            <Link href="/dashboard/profile" className="block px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors mx-2 mb-2">
+              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+              <p className="text-xs text-gray-500 capitalize">{user?.role?.replace('_', ' ')}</p>
+            </Link>
             <nav className="p-4 space-y-2">
               {menuItems.map((item) => {
                 const Icon = item.icon
@@ -177,10 +181,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
 
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-            <div className="mb-4 px-4">
+            <Link href="/dashboard/profile" className="block mb-4 px-4 hover:bg-gray-50 rounded-lg transition-colors">
               <p className="text-sm font-medium text-gray-900">{user?.name}</p>
               <p className="text-xs text-gray-500 capitalize">{user?.role?.replace('_', ' ')}</p>
-            </div>
+            </Link>
             <Button variant="outline" className="w-full" onClick={logout}>
               <LogOut className="mr-2 h-4 w-4" /> Sign Out
             </Button>
