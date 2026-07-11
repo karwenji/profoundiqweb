@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { BookOpen, Users, Star, TrendingUp, Plus, Edit, Trash2, Loader2, DollarSign, CheckCircle, RefreshCw } from 'lucide-react'
+import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import Link from 'next/link'
 import { courses } from '@/data/courses'
 
@@ -25,16 +26,7 @@ function InstructorDashboard() {
   const [stats, setStats] = useState<InstructorStats | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchStats()
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchStats, 30000)
-    
-    return () => clearInterval(interval)
-  }, [])
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       if (!loading) setLoading(true)
       const response = await fetch(`/api/analytics/dashboard?role=instructor&userId=${user?.id}`)
@@ -47,7 +39,10 @@ function InstructorDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [loading, user?.id])
+
+  // Real-time sync every 10 seconds
+  useRealTimeSync(fetchStats, 10000)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount)
@@ -87,7 +82,7 @@ function InstructorDashboard() {
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Link href="/dashboard/instructor/earnings">
+          <Link href="/dashboard/instructor/analytics">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">

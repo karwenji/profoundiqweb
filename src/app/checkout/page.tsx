@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -19,6 +19,11 @@ function CheckoutForm() {
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // If coming from course detail page with single course
   const singleCourse = courseId ? courses.find(c => c.id === courseId) : null
@@ -29,7 +34,7 @@ function CheckoutForm() {
     image: singleCourse.image,
   }] : items
 
-  const total = singleCourse ? singleCourse.price : getTotal()
+  const total = singleCourse ? singleCourse.price : (isClient ? getTotal() : 0)
 
   const handlePaymentSuccess = (reference: string) => {
     console.log('Payment successful with reference:', reference)
@@ -98,6 +103,31 @@ function CheckoutForm() {
                   </div>
 
                   {/* Payment Section */}
+                  <div className="pt-6 border-t">
+                    <h2 className="text-xl font-semibold mb-4">Secure Payment</h2>
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                        <Lock className="h-4 w-4" />
+                        <span>Your payment is secured by Paystack</span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        By completing this purchase, you agree to our Terms of Service and Privacy Policy.
+                      </p>
+                    </div>
+
+                    {email ? (
+                      <PaystackPayment 
+                        amount={total} 
+                        email={email} 
+                        onSuccess={handlePaymentSuccess}
+                        onClose={handlePaymentClose}
+                      />
+                    ) : (
+                      <Button disabled className="w-full" size="lg">
+                        Enter email to proceed to payment
+                      </Button>
+                    )}
+                  </div>
                   <div className="border-t pt-6">
                     <h2 className="text-xl font-semibold mb-4">Payment</h2>
                     <p className="text-sm text-gray-600 mb-4">
@@ -155,7 +185,7 @@ function CheckoutForm() {
                 <div className="border-t pt-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
-                    <span>{formatPrice(total)}</span>
+                    <span>{isClient ? formatPrice(total) : '...'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tax</span>
@@ -163,7 +193,7 @@ function CheckoutForm() {
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span className="text-primary">{formatPrice(total)}</span>
+                    <span className="text-primary">{isClient ? formatPrice(total) : '...'}</span>
                   </div>
                 </div>
                 <div className="mt-6 space-y-2 text-sm text-gray-600">

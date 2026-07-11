@@ -2,14 +2,34 @@
 
 import Link from 'next/link'
 import { useCart } from '@/store/cart'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from './ui/button'
-import { ShoppingCart, Menu, X } from 'lucide-react'
+import { ShoppingCart, Menu, X, Settings, User, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import Logo from './Logo'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export default function Header() {
   const { items } = useCart()
+  const { user, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const getDashboardLink = () => {
+    if (!user) return '/auth/login'
+    switch (user.role) {
+      case 'superadmin': return '/dashboard/super-admin'
+      case 'admin': return '/dashboard/admin'
+      case 'instructor': return '/dashboard/instructor'
+      default: return '/dashboard/student'
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -48,16 +68,58 @@ export default function Header() {
                 )}
               </Button>
             </Link>
-            <Link href="/auth/login">
-              <Button variant="outline" size="sm" className="hidden md:inline-flex">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/auth/register">
-              <Button size="sm" className="hidden md:inline-flex">
-                Get Started
-              </Button>
-            </Link>
+
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href={getDashboardLink()} className="cursor-pointer flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/profile" className="cursor-pointer flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Profile Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  {user.role === 'superadmin' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/super-admin/settings" className="cursor-pointer flex items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Platform Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 focus:text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Link href="/auth/login">
+                  <Button variant="outline" size="sm" className="hidden md:inline-flex">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/auth/register">
+                  <Button size="sm" className="hidden md:inline-flex">
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
 
             {/* Mobile Menu Toggle */}
             <button
@@ -86,12 +148,25 @@ export default function Header() {
               <Link href="/#testimonials" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Testimonials
               </Link>
-              <Link href="/auth/login" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                Sign In
-              </Link>
-              <Link href="/auth/register" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
-                Get Started
-              </Link>
+              {user ? (
+                <>
+                  <Link href={getDashboardLink()} className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                    Dashboard
+                  </Link>
+                  <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="text-sm font-medium text-left text-red-600">
+                    Log Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                    Sign In
+                  </Link>
+                  <Link href="/auth/register" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                    Get Started
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         )}

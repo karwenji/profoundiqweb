@@ -14,6 +14,8 @@ export interface SystemSettings {
   maxStudentsPerCourse: number
   enableRegistration: boolean
   maintenanceMode: boolean
+  defaultCurrency: string
+  supportedCurrencies: string[]
 }
 
 export interface WebhookSettings {
@@ -49,6 +51,8 @@ let systemSettings: SystemSettings = {
   maxStudentsPerCourse: 500,
   enableRegistration: true,
   maintenanceMode: false,
+  defaultCurrency: 'NGN',
+  supportedCurrencies: ['NGN', 'KES', 'USD', 'EUR', 'GBP'],
 }
 
 let webhookSettings: WebhookSettings = {
@@ -89,6 +93,14 @@ export function getSystemSettings(): SystemSettings {
 export function updateSystemSettings(settings: Partial<SystemSettings>): SystemSettings {
   systemSettings = { ...systemSettings, ...settings }
   return { ...systemSettings }
+}
+
+export function getSupportedCurrencies(): string[] {
+  return systemSettings.supportedCurrencies
+}
+
+export function getDefaultCurrency(): string {
+  return systemSettings.defaultCurrency
 }
 
 // Webhook Settings

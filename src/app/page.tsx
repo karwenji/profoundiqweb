@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -5,9 +7,35 @@ import { Card, CardContent } from '@/components/ui/card'
 import CourseCard from '@/components/CourseCard'
 import Logo from '@/components/Logo'
 import { courses, testimonials } from '@/data/courses'
+import { users } from '@/lib/users'
 import { Star, CheckCircle, ArrowRight, Users, Award, BookOpen } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 export default function Home() {
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    totalInstructors: 0,
+    totalCourses: 0,
+    averageRating: 0,
+  })
+
+  useEffect(() => {
+    // Calculate real stats from backend data
+    const totalStudents = users.filter(u => u.role === 'student').length
+    const totalInstructors = users.filter(u => u.role === 'instructor').length
+    const totalCourses = courses.length
+    const averageRating = courses.length > 0 
+      ? (courses.reduce((sum, c) => sum + c.rating, 0) / courses.length).toFixed(1)
+      : '0.0'
+
+    setStats({
+      totalStudents,
+      totalInstructors,
+      totalCourses,
+      averageRating: parseFloat(averageRating),
+    })
+  }, [])
+
   const featuredCourses = courses.slice(0, 3)
 
   return (
@@ -68,19 +96,19 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">10,000+</div>
+              <div className="text-4xl font-bold text-primary mb-2">{stats.totalStudents.toLocaleString()}+</div>
               <div className="text-gray-600">Active Students</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">50+</div>
+              <div className="text-4xl font-bold text-primary mb-2">{stats.totalInstructors}+</div>
               <div className="text-gray-600">Expert Instructors</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">100+</div>
+              <div className="text-4xl font-bold text-primary mb-2">{stats.totalCourses}+</div>
               <div className="text-gray-600">Professional Courses</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">4.8/5</div>
+              <div className="text-4xl font-bold text-primary mb-2">{stats.averageRating}/5</div>
               <div className="text-gray-600">Average Rating</div>
             </div>
           </div>

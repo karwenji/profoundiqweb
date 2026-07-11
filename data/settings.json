@@ -1,0 +1,39 @@
+{
+  "revenueSplit": {
+    "defaultAdminPercentage": 40,
+    "defaultInstructorPercentage": 60,
+    "allowCustomSplits": true
+  },
+  "currency": {
+    "primary": "KES",
+    "supported": [
+      "KES",
+      "USD",
+      "NGN",
+      "GBP",
+      "EUR"
+    ]
+  },
+  "payments": {
+    "paystackPublicKey": "pk_test_2abc7978c6fa36cb3f52d6fdde277ee1695bf158",
+    "paystackSecretKey": "sk_test_54c0426a0b0474178828b002a6a7c0544b36ea43",
+    "paystackWebhookSecret": "",
+    "flutterwavePublicKey": "",
+    "flutterwaveSecretKey": "",
+    "enabledMethods": [
+      "paystack"
+    ],
+    "currency": "KES",
+    "transactionPrefix": "PIQ"
+  },
+  "features": {
+    "socialMediaGrowth": true,
+    "certificates": true,
+    "liveClasses": false
+  },
+  "branding": {
+    "platformName": "Profound IQ Consulting",
+    "logoUrl": "/logo.png",
+    "primaryColor": "#2563eb"
+  }
+}

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { Settings, Save, Sliders, Loader2, CheckCircle } from 'lucide-react'
+import { Settings, Save, Sliders, Loader2, CheckCircle, Globe } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -17,6 +17,8 @@ function SuperAdminGeneralSettingsPage() {
     maxStudentsPerCourse: 500,
     enableRegistration: true,
     maintenanceMode: false,
+    defaultCurrency: 'NGN',
+    supportedCurrencies: ['NGN', 'USD', 'EUR', 'GBP'],
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -177,6 +179,59 @@ function SuperAdminGeneralSettingsPage() {
                       onChange={(e) => setSettings({ ...settings, maintenanceMode: e.target.checked })}
                       className="h-5 w-5"
                     />
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Globe className="h-5 w-5" />
+                      Currency Settings
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Default Currency</label>
+                        <select
+                          value={settings.defaultCurrency}
+                          onChange={(e) => setSettings({ ...settings, defaultCurrency: e.target.value })}
+                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          <option value="NGN">NGN - Nigerian Naira</option>
+                          <option value="KES">KES - Kenya Shilling</option>
+                          <option value="USD">USD - US Dollar</option>
+                          <option value="EUR">EUR - Euro</option>
+                          <option value="GBP">GBP - British Pound</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Supported Currencies</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {['NGN', 'KES', 'USD', 'EUR', 'GBP'].map((currency) => (
+                            <label key={currency} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
+                              <input
+                                type="checkbox"
+                                checked={settings.supportedCurrencies.includes(currency)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSettings({
+                                      ...settings,
+                                      supportedCurrencies: [...settings.supportedCurrencies, currency],
+                                    })
+                                  } else {
+                                    setSettings({
+                                      ...settings,
+                                      supportedCurrencies: settings.supportedCurrencies.filter(c => c !== currency),
+                                    })
+                                  }
+                                }}
+                                className="h-4 w-4"
+                              />
+                              <span className="text-sm">{currency}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <Button onClick={handleSave} className="w-full" disabled={saving}>

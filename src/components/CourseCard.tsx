@@ -4,13 +4,19 @@ import { Course } from '@/types'
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card'
 import { Button } from './ui/button'
 import { Star, Clock, Users, BookOpen } from 'lucide-react'
-import { formatPrice } from '@/lib/utils'
+import { getCoursePrice, getCourseOriginalPrice, formatCoursePrice } from '@/lib/course-pricing'
+import { getDefaultCurrency } from '@/lib/settings'
 
 interface CourseCardProps {
   course: Course
+  currency?: string
 }
 
-export default function CourseCard({ course }: CourseCardProps) {
+export default function CourseCard({ course, currency }: CourseCardProps) {
+  const selectedCurrency = currency || getDefaultCurrency()
+  const currentPrice = getCoursePrice(course, selectedCurrency)
+  const originalPrice = getCourseOriginalPrice(course, selectedCurrency)
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative h-48 w-full">
@@ -55,13 +61,13 @@ export default function CourseCard({ course }: CourseCardProps) {
       
       <CardFooter className="flex items-center justify-between pt-2">
         <div>
-          {course.originalPrice && (
+          {originalPrice && originalPrice > currentPrice && (
             <span className="text-sm text-muted-foreground line-through mr-2">
-              {formatPrice(course.originalPrice)}
+              {formatCoursePrice({ ...course, price: originalPrice }, selectedCurrency)}
             </span>
           )}
           <span className="text-xl font-bold text-primary">
-            {formatPrice(course.price)}
+            {formatCoursePrice(course, selectedCurrency)}
           </span>
         </div>
         <Link href={`/courses/${course.id}`}>

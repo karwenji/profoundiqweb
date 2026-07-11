@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -8,6 +8,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getAllUsers, updateUserRole, deactivateUser, activateUser, UserRole } from '@/lib/users'
 import { Users, UserPlus, CheckCircle, XCircle, BookOpen, TrendingUp, DollarSign, Loader2, Activity, Clock, RefreshCw } from 'lucide-react'
+import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import Link from 'next/link'
 
 interface SuperAdminStats {
@@ -33,16 +34,7 @@ function SuperAdminDashboard() {
   const [stats, setStats] = useState<SuperAdminStats | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchStats()
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchStats, 30000)
-    
-    return () => clearInterval(interval)
-  }, [])
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       if (!loading) setLoading(true)
       const response = await fetch('/api/analytics/dashboard?role=super_admin')
@@ -55,7 +47,10 @@ function SuperAdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [loading])
+
+  // Real-time sync every 10 seconds
+  useRealTimeSync(fetchStats, 10000)
 
   const filteredUsers = selectedRole === 'all' ? users : users.filter(u => u.role === selectedRole)
 

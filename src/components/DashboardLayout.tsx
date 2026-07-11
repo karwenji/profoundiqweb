@@ -21,6 +21,9 @@ import {
   Shield,
   GraduationCap,
   LayoutDashboard,
+  TrendingUp,
+  Share2,
+  DollarSign,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -32,37 +35,41 @@ interface NavItem {
 
 const superAdminMenu: NavItem[] = [
   { label: 'Overview', href: '/dashboard/super-admin', icon: LayoutDashboard },
+  { label: 'Analytics & Reports', href: '/dashboard/super-admin/reports', icon: BarChart3 },
+  { label: 'Social Media', href: '/dashboard/super-admin/social-media', icon: Share2 },
   { label: 'User Management', href: '/dashboard/super-admin/users', icon: Users },
   { label: 'Role Permissions', href: '/dashboard/super-admin/roles', icon: Shield },
   { label: 'System Settings', href: '/dashboard/super-admin/settings', icon: Settings },
-  { label: 'Analytics', href: '/dashboard/super-admin/analytics', icon: BarChart3 },
   { label: 'Audit Logs', href: '/dashboard/super-admin/logs', icon: FileText },
 ]
 
 const adminMenu: NavItem[] = [
   { label: 'Overview', href: '/dashboard/admin', icon: LayoutDashboard },
+  { label: 'Analytics & Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
   { label: 'Manage Courses', href: '/dashboard/admin/courses', icon: BookOpen },
   { label: 'Manage Instructors', href: '/dashboard/admin/instructors', icon: Users },
   { label: 'Student Management', href: '/dashboard/admin/students', icon: GraduationCap },
-  { label: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
+  { label: 'Payments', href: '/dashboard/admin/payments', icon: CreditCard },
   { label: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
 ]
 
 const instructorMenu: NavItem[] = [
   { label: 'Overview', href: '/dashboard/instructor', icon: LayoutDashboard },
+  { label: 'Analytics & Reports', href: '/dashboard/instructor/reports', icon: BarChart3 },
   { label: 'My Courses', href: '/dashboard/instructor/courses', icon: BookOpen },
   { label: 'Create Course', href: '/dashboard/instructor/create', icon: FileText },
   { label: 'Students', href: '/dashboard/instructor/students', icon: Users },
-  { label: 'Analytics', href: '/dashboard/instructor/analytics', icon: BarChart3 },
+  { label: 'Earnings', href: '/dashboard/instructor/earnings', icon: DollarSign },
   { label: 'Messages', href: '/dashboard/instructor/messages', icon: MessageSquare },
 ]
 
 const studentMenu: NavItem[] = [
-  { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Overview', href: '/dashboard/student', icon: LayoutDashboard },
+  { label: 'Analytics & Reports', href: '/dashboard/student/analytics', icon: BarChart3 },
   { label: 'My Courses', href: '/dashboard/courses', icon: BookOpen },
-  { label: 'Enrolled', href: '/dashboard/enrolled', icon: GraduationCap },
   { label: 'Certificates', href: '/dashboard/certificates', icon: FileText },
   { label: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+  { label: 'Support', href: '/dashboard/support', icon: MessageSquare },
   { label: 'Profile', href: '/dashboard/profile', icon: User },
 ]
 

@@ -43,8 +43,8 @@ export default function Footer() {
             <h3 className="font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-sm text-gray-400">
               <li>Email: info@profoundiqconsulting.com</li>
-              <li>Phone: +1 (555) 123-4567</li>
-              <li>Address: 123 Learning Street, Education City</li>
+              <li>Phone: +254 727 374 055</li>
+              <li>Address: Nairobi, Kenya</li>
             </ul>
           </div>
         </div>

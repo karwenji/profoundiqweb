@@ -16,13 +16,14 @@ interface PaymentMethod {
   enabled: boolean
   publicKey?: string
   secretKey?: string
-  currency?: string
+  currencies: string[]
   accountDetails?: string
 }
 
 function SuperAdminPaymentSettingsPage() {
   const { user } = useAuth()
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const availableCurrencies = ['NGN', 'KES', 'USD', 'EUR', 'GBP']
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -37,7 +38,12 @@ function SuperAdminPaymentSettingsPage() {
       const response = await fetch('/api/settings/payments')
       const result = await response.json()
       if (result.success) {
-        setPaymentMethods(result.data)
+        // Ensure all payment methods have a currencies array
+        const normalizedMethods = result.data.map((method: PaymentMethod) => ({
+          ...method,
+          currencies: method.currencies && method.currencies.length > 0 ? method.currencies : ['NGN'],
+        }))
+        setPaymentMethods(normalizedMethods)
       }
     } catch (error) {
       console.error('Failed to fetch payment methods:', error)
@@ -142,6 +148,7 @@ function SuperAdminPaymentSettingsPage() {
                         name: '',
                         type: 'paystack',
                         enabled: false,
+                        currencies: ['NGN'],
                       }
                       setPaymentMethods([...paymentMethods, newMethod])
                     }}
@@ -157,20 +164,32 @@ function SuperAdminPaymentSettingsPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1 space-y-3">
                           <div>
-                            <label className="block text-sm font-medium mb-1">Payment Method Name</label>
-                            <input
-                              type="text"
-                              value={method.name}
-                              onChange={(e) => {
-                                setPaymentMethods(
-                                  paymentMethods.map((m) =>
-                                    m.id === method.id ? { ...m, name: e.target.value } : m
-                                  )
-                                )
-                              }}
-                              placeholder="e.g., Paystack, Stripe"
-                              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                            />
+                            <label className="block text-sm font-medium mb-2">Supported Currencies</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {availableCurrencies.map((currency) => (
+                                <label key={currency} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                  <input
+                                    type="checkbox"
+                                    checked={method.currencies.includes(currency)}
+                                    onChange={(e) => {
+                                      setPaymentMethods(
+                                        paymentMethods.map((m) => {
+                                          if (m.id === method.id) {
+                                            const newCurrencies = e.target.checked
+                                              ? [...m.currencies, currency]
+                                              : m.currencies.filter(c => c !== currency)
+                                            return { ...m, currencies: newCurrencies }
+                                          }
+                                          return m
+                                        })
+                                      )
+                                    }}
+                                    className="h-4 w-4"
+                                  />
+                                  <span className="text-sm">{currency}</span>
+                                </label>
+                              ))}
+                            </div>
                           </div>
 
                           <div>

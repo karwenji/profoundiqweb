@@ -57,11 +57,11 @@ export default function CourseDetailPage() {
               <p className="text-lg text-gray-600 mb-4">{course.description}</p>
               
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
-                <div className="flex items-center">
+                <Link href={`/courses?rating=${course.rating}`} className="flex items-center hover:text-primary transition-colors">
                   <Star className="h-5 w-5 text-yellow-500 mr-1" />
                   <span className="font-semibold">{course.rating}</span>
                   <span className="ml-1">({course.students.toLocaleString()} students)</span>
-                </div>
+                </Link>
                 <div className="flex items-center">
                   <Clock className="h-5 w-5 mr-1" />
                   <span>{course.duration}</span>
@@ -70,15 +70,24 @@ export default function CourseDetailPage() {
                   <BookOpen className="h-5 w-5 mr-1" />
                   <span>{course.lessons} lessons</span>
                 </div>
-                <div className="flex items-center">
+                <Link href={`/courses?level=${course.level}`} className="flex items-center hover:text-primary transition-colors">
                   <Users className="h-5 w-5 mr-1" />
                   <span>{course.level}</span>
-                </div>
+                </Link>
               </div>
 
-              <div className="flex items-center">
-                <span className="text-gray-600 mr-2">Instructor:</span>
-                <span className="font-semibold">{course.instructor}</span>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-gray-600">Instructor:</span>
+                <Link href={`/courses?instructor=${encodeURIComponent(course.instructor)}`} className="font-semibold text-blue-600 hover:underline">
+                  {course.instructor}
+                </Link>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-gray-600">Category:</span>
+                <Link href={`/courses?category=${encodeURIComponent(course.category)}`} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium hover:bg-primary/20 transition-colors">
+                  {course.category}
+                </Link>
               </div>
             </div>
 

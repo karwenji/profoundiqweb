@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { BookOpen, Award, Clock, TrendingUp, Loader2, CheckCircle, DollarSign, RefreshCw } from 'lucide-react'
+import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import Link from 'next/link'
 
 interface StudentStats {
@@ -23,16 +24,7 @@ function StudentDashboard() {
   const [stats, setStats] = useState<StudentStats | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchStats()
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchStats, 30000)
-    
-    return () => clearInterval(interval)
-  }, [])
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       if (!loading) setLoading(true)
       const response = await fetch(`/api/analytics/dashboard?role=student&userId=${user?.id}`)
@@ -45,7 +37,10 @@ function StudentDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [loading, user?.id])
+
+  // Real-time sync every 10 seconds
+  useRealTimeSync(fetchStats, 10000)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount)
@@ -98,7 +93,7 @@ function StudentDashboard() {
             </Card>
           </Link>
 
-          <Link href="/dashboard/certificates">
+          <Link href="/dashboard/student/analytics">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -115,7 +110,7 @@ function StudentDashboard() {
             </Card>
           </Link>
 
-          <Link href="/dashboard/progress">
+          <Link href="/dashboard/student/analytics">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -132,7 +127,7 @@ function StudentDashboard() {
             </Card>
           </Link>
 
-          <Link href="/dashboard/billing">
+          <Link href="/dashboard/student/analytics">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">

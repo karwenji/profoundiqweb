@@ -1,13 +1,22 @@
 export type UserRole = 'super_admin' | 'admin' | 'instructor' | 'student';
 
+export interface CoursePricing {
+  NGN?: number;
+  KES?: number;
+  USD?: number;
+  EUR?: number;
+  GBP?: number;
+}
+
 export interface Course {
   id: string;
   title: string;
   description: string;
   instructor: string;
   instructorId?: string;
-  price: number;
+  price: number; // Default price (for backwards compatibility)
   originalPrice?: number;
+  pricing?: CoursePricing; // Multi-currency pricing
   image: string;
   category: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
