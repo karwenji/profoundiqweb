@@ -58,6 +58,7 @@ export async function POST(request: Request) {
         message: 'Registration successful',
         user: {
           id: newUser.id,
+          uniqueId: newUser.uniqueId,
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,

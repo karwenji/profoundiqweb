@@ -6,6 +6,7 @@ import { UserRole } from '@/types'
 
 interface User {
   id: string
+  uniqueId: string
   name: string
   email: string
   role: UserRole

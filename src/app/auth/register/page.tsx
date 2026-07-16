@@ -15,6 +15,8 @@ export default function RegisterPage() {
   const [role, setRole] = useState<UserRole>('student')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [uniqueId, setUniqueId] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,8 +38,14 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Registration failed')
       }
 
-      // Registration successful - redirect to login
-      router.push('/auth/login')
+      // Registration successful - show unique ID before redirecting
+      setUniqueId(data.user.uniqueId)
+      setSuccessMessage(`Account created successfully! Your unique identifier is: ${data.user.uniqueId}`)
+      
+      // Redirect to login after 5 seconds so user can note their ID
+      setTimeout(() => {
+        router.push('/auth/login')
+      }, 5000)
     } catch (err: any) {
       setError(err.message || 'An error occurred during registration')
     } finally {
@@ -52,6 +60,18 @@ export default function RegisterPage() {
           <CardTitle className="text-2xl text-center">Create Your Account</CardTitle>
         </CardHeader>
         <CardContent>
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+              <p className="font-semibold mb-1">Registration Successful!</p>
+              <p>{successMessage}</p>
+              {uniqueId && (
+                <div className="mt-2 p-2 bg-white border border-green-300 rounded font-mono text-center text-lg font-bold tracking-wider">
+                  {uniqueId}
+                </div>
+              )}
+              <p className="mt-2 text-xs">You will be redirected to login in 5 seconds...</p>
+            </div>
+          )}
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
               {error}
