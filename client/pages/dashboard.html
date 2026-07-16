@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Profound IQ Consulting</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <div class="logo-icon">PI</div>
+        <div class="logo-text">
+          <span class="logo-name">PROFOUND IQ</span>
+          <span class="logo-sub">CONSULTING</span>
+        </div>
+      </a>
+      <div class="header-actions">
+        <a href="/pages/cart.html" class="icon-btn" aria-label="Cart">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span class="cart-count" id="cart-count" style="display:none;">0</span>
+        </a>
+        <div id="auth-buttons" style="display:none;"></div>
+        <div id="user-menu" style="display:none;">
+          <div class="dropdown">
+            <button class="btn btn-outline btn-sm dropdown-toggle" id="user-dropdown">
+              <span id="user-name">User</span>
+            </button>
+            <div class="dropdown-menu" id="user-dropdown-menu">
+              <a href="/pages/dashboard.html" class="dropdown-item">Dashboard</a>
+              <a href="/pages/profile.html" class="dropdown-item">Profile</a>
+              <hr class="dropdown-divider">
+              <button class="dropdown-item" id="logout-btn">Logout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <a href="/pages/dashboard.html" class="active">📊 Dashboard</a>
+        <a href="/pages/courses.html">📚 Courses</a>
+        <a href="/pages/enrolled.html">🎓 My Learning</a>
+        <a href="/pages/certificates.html">📜 Certificates</a>
+        <a href="/pages/profile.html">👤 Profile</a>
+        <a href="/pages/billing.html">💳 Billing</a>
+        <a href="/pages/support.html">💬 Support</a>
+      </nav>
+      <div class="sidebar-section" id="admin-section" style="display:none;">Administration</div>
+      <nav class="sidebar-nav" id="admin-nav" style="display:none;">
+        <a href="/pages/admin-courses.html">Manage Courses</a>
+        <a href="/pages/admin-users.html">Manage Users</a>
+        <a href="/pages/admin-settings.html">Settings</a>
+        <a href="/pages/admin-analytics.html">Analytics</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-content">
+      <div class="dashboard-header">
+        <h1 id="dashboard-title">Welcome back!</h1>
+        <p style="color:var(--gray-500);margin-top:0.25rem;" id="dashboard-subtitle">Here's your learning overview</p>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-enrolled">-</div>
+          <div class="stat-label">Enrolled Courses</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-completed">-</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-certificates">-</div>
+          <div class="stat-label">Certificates Earned</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-hours">-</div>
+          <div class="stat-label">Hours Learned</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-bottom:1rem;font-size:1.15rem;">Recent Activity</h2>
+        <div id="recent-activity">
+          <p class="loading-spinner">Loading...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!Auth.requireAuth()) return;
+
+      // Show admin nav for admins
+      if (Auth.hasRole('admin', 'super_admin')) {
+        document.getElementById('admin-section').style.display = 'block';
+        document.getElementById('admin-nav').style.display = 'block';
+      }
+
+      // Set welcome message
+      const titleEl = document.getElementById('dashboard-title');
+      if (Auth.user) {
+        titleEl.textContent = `Welcome back, ${Auth.user.name.split(' ')[0]}!`;
+      }
+
+      // Load stats (placeholder data until enrollment API is built)
+      document.getElementById('stat-enrolled').textContent = '0';
+      document.getElementById('stat-completed').textContent = '0';
+      document.getElementById('stat-certificates').textContent = '0';
+      document.getElementById('stat-hours').textContent = '0';
+
+      document.getElementById('recent-activity').innerHTML = `
+        <p style="color:var(--gray-500);font-size:0.9rem;">No recent activity. Start by browsing <a href="/pages/courses.html" style="color:var(--primary);">available courses</a>.</p>
+      `;
+
+      updateCartCount();
+    });
+
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const countEl = document.getElementById('cart-count');
+      if (countEl) {
+        if (cart.length > 0) {
+          countEl.textContent = cart.length;
+          countEl.style.display = 'flex';
+        } else {
+          countEl.style.display = 'none';
+        }
+      }
+    }
+  </script>
+</body>
+</html>

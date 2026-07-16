@@ -5,6 +5,7 @@ export type UserRole = 'super_admin' | 'admin' | 'instructor' | 'student';
 
 export interface User {
   id: string;
+  uniqueId: string;
   name: string;
   email: string;
   password: string;
@@ -17,6 +18,7 @@ export const users: User[] = [
   // Default super admin account
   {
     id: 'sa-001',
+    uniqueId: 'PIQ-SA-001',
     name: 'Stephen Mwihaki',
     email: 'superadmin@profoundiqconsulting.com',
     password: 'admin123', // In production, use hashed password
@@ -27,6 +29,7 @@ export const users: User[] = [
   // Default admin account
   {
     id: 'ad-001',
+    uniqueId: 'PIQ-AD-001',
     name: 'Admin User',
     email: 'admin@profoundiqconsulting.com',
     password: 'admin123',
@@ -37,6 +40,7 @@ export const users: User[] = [
   // Default instructor account
   {
     id: 'ins-001',
+    uniqueId: 'PIQ-INS-001',
     name: 'Dr. Sarah Johnson',
     email: 'sarah@profoundiqconsulting.com',
     password: 'instructor123',
@@ -47,6 +51,7 @@ export const users: User[] = [
   // Default student account
   {
     id: 'st-001',
+    uniqueId: 'PIQ-ST-001',
     name: 'John Student',
     email: 'student@profoundiqconsulting.com',
     password: 'student123',
@@ -64,10 +69,18 @@ export function findUserById(id: string): User | undefined {
   return users.find(u => u.id === id);
 }
 
-export function createUser(user: Omit<User, 'id' | 'createdAt'>): User {
+function generateUniqueId(role: UserRole): string {
+  const prefix = role === 'super_admin' ? 'SA' : role === 'admin' ? 'AD' : role === 'instructor' ? 'INS' : 'ST';
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `PIQ-${prefix}-${timestamp}${random}`;
+}
+
+export function createUser(user: Omit<User, 'id' | 'uniqueId' | 'createdAt'>): User {
   const newUser: User = {
     ...user,
     id: crypto.randomUUID(),
+    uniqueId: generateUniqueId(user.role),
     createdAt: new Date().toISOString(),
     isActive: true,
   };
@@ -78,6 +91,7 @@ export function createUser(user: Omit<User, 'id' | 'createdAt'>): User {
 export function getAllUsers(): User[] {
   return users.map(u => ({
     id: u.id,
+    uniqueId: u.uniqueId,
     name: u.name,
     email: u.email,
     role: u.role,
