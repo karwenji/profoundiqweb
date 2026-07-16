@@ -10,14 +10,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { SOCIAL_MEDIA_SERVICES, calculateOrderCost, formatCurrency } from '@/lib/social-media-service'
-import { Instagram, Facebook, Youtube, Twitter, Linkedin, Video, Heart, MessageCircle, Share2, Users, Loader2, CheckCircle } from 'lucide-react'
+import { Camera, Globe, PlayCircle, MessageSquare, Briefcase, Video, Heart, MessageCircle, Share2, Users, Loader2, CheckCircle } from 'lucide-react'
 
 const PLATFORM_ICONS: Record<string, any> = {
-  instagram: Instagram,
-  facebook: Facebook,
-  youtube: Youtube,
-  twitter: Twitter,
-  linkedin: Linkedin,
+  instagram: Camera,
+  facebook: Globe,
+  youtube: PlayCircle,
+  twitter: MessageSquare,
+  linkedin: Briefcase,
   tiktok: Video,
 }
 
