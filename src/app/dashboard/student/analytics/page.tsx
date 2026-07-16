@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { TrendingUp, DollarSign, BookOpen, Award, Clock, Loader2, ArrowLeft, Download, Printer } from 'lucide-react'
+import { TrendingUp, DollarSign, BookOpen, Award, Clock, Loader2, ArrowLeft, Download, Printer, FileText } from 'lucide-react'
 import { exportToPDF, exportToExcel } from '@/lib/report-export'
 import Link from 'next/link'
 

@@ -7,8 +7,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const role = searchParams.get('role')
-    const userId = searchParams.get('userId')
-    const type = searchParams.get('type') // 'summary' or 'detailed'
+    const userId = searchParams.get('userId') ?? undefined
+    const type = searchParams.get('type') ?? undefined // 'summary' or 'detailed'
 
     // Basic stats
     let stats
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
         { month: 'Mar', users: 920, revenue: 158000, courses: 130 },
         { month: 'Apr', users: 1000, revenue: 180000, courses: 138 },
         { month: 'May', users: 1100, revenue: 210000, courses: 145 },
-        { month: 'Jun', users: stats.totalUsers, revenue: stats.monthlyRevenue * 6, courses: stats.totalCourses },
+        { month: 'Jun', users: 'totalUsers' in stats ? (stats as any).totalUsers : 0, revenue: ('monthlyRevenue' in stats ? (stats as any).monthlyRevenue : 0) * 6, courses: 'totalCourses' in stats ? (stats as any).totalCourses : 0 },
       ]
 
       return NextResponse.json({ 

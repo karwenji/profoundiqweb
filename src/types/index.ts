@@ -26,6 +26,7 @@ export interface Course {
   lessons: number;
   curriculum: Lesson[];
   features: string[];
+  status?: 'draft' | 'published' | 'archived' | 'pending';
 }
 
 export interface Lesson {

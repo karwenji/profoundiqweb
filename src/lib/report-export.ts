@@ -20,11 +20,11 @@ export function exportToPDF(title: string, data: any[], filename: string = 'repo
     const headers = Object.keys(data[0]).map(key => 
       key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')
     )
-    const rows = data.map(item => Object.values(item))
+    const rows = data.map(item => Object.values(item) as (string | number)[])
     
     autoTable(doc, {
       head: [headers],
-      body: rows,
+      body: rows as any,
       startY: 40,
       theme: 'grid',
       styles: { fontSize: 8 },

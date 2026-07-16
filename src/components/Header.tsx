@@ -24,7 +24,7 @@ export default function Header() {
   const getDashboardLink = () => {
     if (!user) return '/auth/login'
     switch (user.role) {
-      case 'superadmin': return '/dashboard/super-admin'
+      case 'super_admin': return '/dashboard/super-admin'
       case 'admin': return '/dashboard/admin'
       case 'instructor': return '/dashboard/instructor'
       default: return '/dashboard/student'
@@ -91,7 +91,7 @@ export default function Header() {
                       <span>Profile Settings</span>
                     </Link>
                   </DropdownMenuItem>
-                  {user.role === 'superadmin' && (
+                  {user.role === 'super_admin' && (
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard/super-admin/settings" className="cursor-pointer flex items-center">
                         <Settings className="mr-2 h-4 w-4" />

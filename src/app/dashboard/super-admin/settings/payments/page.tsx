@@ -16,7 +16,8 @@ interface PaymentMethod {
   enabled: boolean
   publicKey?: string
   secretKey?: string
-  currencies: string[]
+  currency?: string
+  currencies?: string[]
   accountDetails?: string
 }
 
@@ -170,14 +171,15 @@ function SuperAdminPaymentSettingsPage() {
                                 <label key={currency} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
                                   <input
                                     type="checkbox"
-                                    checked={method.currencies.includes(currency)}
+                                    checked={(method.currencies ?? []).includes(currency)}
                                     onChange={(e) => {
                                       setPaymentMethods(
                                         paymentMethods.map((m) => {
                                           if (m.id === method.id) {
+                                            const current = m.currencies ?? []
                                             const newCurrencies = e.target.checked
-                                              ? [...m.currencies, currency]
-                                              : m.currencies.filter(c => c !== currency)
+                                              ? [...current, currency]
+                                              : current.filter(c => c !== currency)
                                             return { ...m, currencies: newCurrencies }
                                           }
                                           return m

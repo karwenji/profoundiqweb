@@ -76,7 +76,7 @@ function generateUniqueId(role: UserRole): string {
   return `PIQ-${prefix}-${timestamp}${random}`;
 }
 
-export function createUser(user: Omit<User, 'id' | 'uniqueId' | 'createdAt'>): User {
+export function createUser(user: Omit<User, 'id' | 'uniqueId' | 'createdAt' | 'isActive'>): User {
   const newUser: User = {
     ...user,
     id: crypto.randomUUID(),

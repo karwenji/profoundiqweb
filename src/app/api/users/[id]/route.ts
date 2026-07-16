@@ -4,10 +4,10 @@ import { findUserById, updateUserRole, deactivateUser, activateUser, type UserRo
 // PATCH /api/users/[id] - Update user role or status
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = params.id
+    const { id: userId } = await params
     const body = await request.json()
     const { role, isActive } = body
 
@@ -56,10 +56,10 @@ export async function PATCH(
 // DELETE /api/users/[id] - Deactivate user
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = params.id
+    const { id: userId } = await params
     const success = deactivateUser(userId)
 
     if (!success) {
