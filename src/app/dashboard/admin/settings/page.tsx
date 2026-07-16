@@ -3,31 +3,6 @@ import { redirect } from 'next/navigation'
 export default function AdminSettingsPage() {
   redirect('/dashboard/admin/settings/general')
 }
-                    <span className="font-medium">Payment Methods</span>
-                  </button>
-                  <button
-                    onClick={() => scrollToSection('webhook', webhookRef)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
-                      activeSection === 'webhook'
-                        ? 'bg-primary text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Webhook className="h-5 w-5" />
-                    <span className="font-medium">Webhook & Callback</span>
-                  </button>
-                </nav>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* General Settings */}
-            <div ref={generalRef} id="general-settings">
-              <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-6">
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
                   <h4 className="font-semibold">Allow Instructor Registration</h4>
