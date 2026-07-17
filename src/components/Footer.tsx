@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Logo from './Logo'
-import { Facebook, Twitter, Youtube, Instagram, Linkedin, MessageCircle } from 'lucide-react'
+import { Share2, MessageCircle, Globe, Video, Camera, Briefcase } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -53,19 +53,19 @@ export default function Footer() {
               <h4 className="font-semibold mb-3 text-sm">Follow Us</h4>
               <div className="flex space-x-3">
                 <a href="https://www.facebook.com/profoundIQ" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
-                  <Facebook className="h-5 w-5" />
+                  <Share2 className="h-5 w-5" />
                 </a>
                 <a href="https://x.com/ProfoundIQC" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
-                  <Twitter className="h-5 w-5" />
+                  <Globe className="h-5 w-5" />
                 </a>
                 <a href="https://www.youtube.com/@ProfoundIQConsulting" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
-                  <Youtube className="h-5 w-5" />
+                  <Video className="h-5 w-5" />
                 </a>
                 <a href="https://www.instagram.com/profoundiqconsulting/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
-                  <Instagram className="h-5 w-5" />
+                  <Camera className="h-5 w-5" />
                 </a>
                 <a href="https://linkedin.com/company/profound-iq-consulting" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
-                  <Linkedin className="h-5 w-5" />
+                  <Briefcase className="h-5 w-5" />
                 </a>
               </div>
             </div>
