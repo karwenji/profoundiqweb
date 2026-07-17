@@ -45,6 +45,9 @@ export default function Header() {
             <Link href="/" className="text-sm font-medium transition-colors hover:text-primary">
               Home
             </Link>
+            <Link href="/profound-iq-story" className="text-sm font-medium transition-colors hover:text-primary">
+              Our Story
+            </Link>
             <Link href="/transformation-journey" className="text-sm font-medium transition-colors hover:text-primary">
               Transformation Journey
             </Link>
@@ -59,6 +62,9 @@ export default function Header() {
             </Link>
             <Link href="/contact" className="text-sm font-medium transition-colors hover:text-primary">
               Contact
+            </Link>
+            <Link href="/terms-of-service" className="text-sm font-medium transition-colors hover:text-primary">
+              Terms
             </Link>
           </nav>
 
@@ -148,6 +154,9 @@ export default function Header() {
               <Link href="/" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Home
               </Link>
+              <Link href="/profound-iq-story" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                Our Story
+              </Link>
               <Link href="/courses" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Courses
               </Link>
@@ -156,6 +165,9 @@ export default function Header() {
               </Link>
               <Link href="/contact" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Contact
+              </Link>
+              <Link href="/terms-of-service" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                Terms of Service
               </Link>
               {user ? (
                 <>
