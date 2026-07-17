@@ -59,29 +59,35 @@ export default function FloatingRegisterButton() {
       {/* Main CTA button */}
       <Link
         href="/auth/register"
-        className={`group relative flex items-center gap-2 bg-gradient-to-r from-secondary to-yellow-500 text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-yellow-500/40 hover:scale-105 transition-all duration-300 ${
+        className={`group relative flex items-center gap-3 bg-gradient-to-r from-secondary via-yellow-500 to-orange-500 text-white px-10 py-6 sm:px-12 sm:py-7 rounded-full shadow-[0_0_40px_rgba(234,179,8,0.5)] hover:shadow-[0_0_60px_rgba(234,179,8,0.7)] hover:scale-105 transition-all duration-300 border-2 border-white/30 ${
           animatePulse ? 'animate-bounce scale-110' : ''
         }`}
       >
-        {/* Glow effect */}
+        {/* Animated glow ring */}
+        <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-secondary via-yellow-400 to-orange-500 opacity-75 blur-lg animate-pulse" />
         <span className="absolute inset-0 rounded-full bg-white/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
-        <UserPlus className="h-5 w-5 relative z-10" />
-        <span className="font-bold text-sm sm:text-base relative z-10">Get Started Free</span>
-        <ArrowRight className="h-4 w-4 relative z-10 group-hover:translate-x-1 transition-transform" />
+        <UserPlus className="h-8 w-8 sm:h-9 sm:w-9 relative z-10 drop-shadow-md" />
+        <div className="flex flex-col relative z-10">
+          <span className="font-extrabold text-lg sm:text-xl tracking-wide drop-shadow-md">Join Now — It's Free!</span>
+          <span className="text-xs sm:text-sm font-medium text-white/90">Start learning in minutes</span>
+        </div>
+        <ArrowRight className="h-6 w-6 sm:h-7 sm:w-7 relative z-10 group-hover:translate-x-2 transition-transform drop-shadow-md" />
 
         {/* Notification badge */}
-        <span className="absolute -top-1 -right-1 flex h-4 w-4">
+        <span className="absolute -top-2 -right-2 flex h-6 w-6 sm:h-7 sm:w-7">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500" />
+          <span className="relative inline-flex rounded-full h-6 w-6 sm:h-7 sm:w-7 bg-red-500 border-2 border-white items-center justify-center">
+            <span className="text-[10px] sm:text-xs font-bold text-white">!</span>
+          </span>
         </span>
       </Link>
 
       {/* Tooltip text */}
-      <div className="bg-white text-gray-900 text-xs font-medium px-3 py-1.5 rounded-lg shadow-lg max-w-[200px] text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
-        Join thousands of learners today!
+      <div className="bg-white text-gray-900 text-sm font-semibold px-5 py-2.5 rounded-xl shadow-xl max-w-[260px] text-center animate-in fade-in slide-in-from-bottom-2 duration-500 border border-gray-100">
+        🔥 Join 10,000+ professionals transforming their careers!
         {/* Arrow pointing to button */}
-        <div className="absolute -bottom-1 right-8 w-2 h-2 bg-white rotate-45" />
+        <div className="absolute -bottom-1.5 right-10 w-3 h-3 bg-white rotate-45 border-r border-b border-gray-100" />
       </div>
     </div>
   )
