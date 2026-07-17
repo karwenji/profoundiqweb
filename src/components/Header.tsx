@@ -7,6 +7,7 @@ import { Button } from './ui/button'
 import { ShoppingCart, Menu, X, Settings, User, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import Logo from './Logo'
+import NotificationsDropdown from './NotificationsDropdown'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,6 +71,8 @@ export default function Header() {
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
+            {user && <NotificationsDropdown />}
+
             <Link href="/cart" className="relative">
               <Button variant="ghost" size="icon">
                 <ShoppingCart className="h-5 w-5" />
