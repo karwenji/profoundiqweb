@@ -45,6 +45,9 @@ export default function Header() {
             <Link href="/" className="text-sm font-medium transition-colors hover:text-primary">
               Home
             </Link>
+            <Link href="/transformation-journey" className="text-sm font-medium transition-colors hover:text-primary">
+              Transformation Journey
+            </Link>
             <Link href="/courses" className="text-sm font-medium transition-colors hover:text-primary">
               Courses
             </Link>
@@ -53,6 +56,9 @@ export default function Header() {
             </Link>
             <Link href="/#pricing" className="text-sm font-medium transition-colors hover:text-primary">
               Pricing
+            </Link>
+            <Link href="/contact" className="text-sm font-medium transition-colors hover:text-primary">
+              Contact
             </Link>
           </nav>
 
@@ -147,6 +153,9 @@ export default function Header() {
               </Link>
               <Link href="/#testimonials" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
                 Testimonials
+              </Link>
+              <Link href="/contact" className="text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                Contact
               </Link>
               {user ? (
                 <>
