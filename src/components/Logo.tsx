@@ -5,13 +5,13 @@ interface LogoProps {
   variant?: 'default' | 'inverted';
 }
 
-export default function Logo({ className = "h-12 w-auto", variant = 'default' }: LogoProps) {
+export default function Logo({ className = "h-10 w-auto sm:h-14 md:h-16 lg:h-20", variant = 'default' }: LogoProps) {
   return (
     <Image
       src="/logo.svg"
       alt="Profound IQ Consulting"
-      width={300}
-      height={80}
+      width={400}
+      height={100}
       className={className}
       priority
     />
