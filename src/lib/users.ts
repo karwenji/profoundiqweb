@@ -88,7 +88,7 @@ export function createUser(user: Omit<User, 'id' | 'uniqueId' | 'createdAt' | 'i
   return newUser;
 }
 
-export function getAllUsers(): User[] {
+export function getAllUsers(): Omit<User, 'password'>[] {
   return users.map(u => ({
     id: u.id,
     uniqueId: u.uniqueId,

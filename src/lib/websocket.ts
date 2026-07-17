@@ -8,7 +8,7 @@ class WebSocketService {
   private reconnectInterval = 5000;
   private isConnecting = false;
 
-  connect(url: string = 'ws://localhost:3000/api/ws') {
+  connect(url: string = process.env.NEXT_PUBLIC_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws`) {
     if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
       return;
     }

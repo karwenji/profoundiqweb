@@ -53,7 +53,7 @@ export async function exportToWord(title: string, data: any[], filename: string 
     new TableRow({
       children: headers.map(header => 
         new TableCell({
-          children: [new Paragraph({ text: header, bold: true })],
+          children: [new Paragraph({ children: [new TextRun({ text: header, bold: true })] })],
           width: { size: 100 / headers.length, type: WidthType.PERCENTAGE },
         })
       ),
