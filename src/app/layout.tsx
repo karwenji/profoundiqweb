@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import FloatingRegisterButton from '@/components/FloatingRegisterButton'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { SettingsProvider } from '@/contexts/SettingsContext'
 
@@ -31,6 +32,7 @@ export default function RootLayout({
             <Header />
             <main className="min-h-screen">{children}</main>
             <Footer />
+            <FloatingRegisterButton />
           </SettingsProvider>
         </AuthProvider>
       </body>
