@@ -132,6 +132,138 @@ router.delete('/:id', auth, (req, res) => {
   }
 });
 
+// GET /api/messages/users - Get users by group for recipient picker
+router.get('/users', auth, (req, res) => {
+  try {
+    const { role, course_id, search } = req.query;
+    let query = 'SELECT id, name, email, role FROM users WHERE 1=1';
+    const params = [];
+
+    if (role && role !== 'all') {
+      query += ' AND role = ?';
+      params.push(role);
+    }
+
+    if (course_id) {
+      query += ' AND id IN (SELECT user_id FROM enrollments WHERE course_id = ?)';
+      params.push(course_id);
+    }
+
+    if (search) {
+      query += ' AND (name LIKE ? OR email LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Exclude the sender
+    query += ' AND id != ?';
+    params.push(req.user.id);
+
+    query += ' ORDER BY name ASC LIMIT 100';
+
+    const users = db.prepare(query).all(...params);
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch users' });
+  }
+});
+
+// GET /api/messages/courses - Get courses for course-based group selection
+router.get('/courses', auth, (req, res) => {
+  try {
+    let query = 'SELECT id, title FROM courses';
+    const params = [];
+
+    // Instructors see their own courses, admins/super_admins see all
+    if (req.user.role === 'instructor') {
+      query += ' WHERE instructor_id = ?';
+      params.push(req.user.id);
+    }
+
+    query += ' ORDER BY title ASC';
+    const courses = db.prepare(query).all(...params);
+    res.json({ success: true, data: courses });
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch courses' });
+  }
+});
+
+// POST /api/messages/bulk - Send message to multiple recipients or a group
+router.post('/bulk', auth, (req, res) => {
+  try {
+    const { recipient_ids, group_role, group_course_id, subject, body } = req.body;
+    const sender_id = req.user.id;
+
+    if (!body) {
+      return res.status(400).json({ success: false, message: 'Message body is required' });
+    }
+
+    // Resolve recipients from group filters if provided
+    let targets = recipient_ids || [];
+
+    if (group_role || group_course_id) {
+      let query = 'SELECT id FROM users WHERE id != ?';
+      const params = [sender_id];
+
+      if (group_role && group_role !== 'all') {
+        query += ' AND role = ?';
+        params.push(group_role);
+      }
+
+      if (group_course_id) {
+        query += ' AND id IN (SELECT user_id FROM enrollments WHERE course_id = ?)';
+        params.push(group_course_id);
+      }
+
+      const groupUsers = db.prepare(query).all(...params);
+      targets = [...new Set([...targets, ...groupUsers.map(u => u.id)])];
+    }
+
+    if (targets.length === 0) {
+      return res.status(400).json({ success: false, message: 'No recipients specified' });
+    }
+
+    // Permission check: only admin/super_admin can send bulk messages
+    if (targets.length > 1 && !['admin', 'super_admin'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only admins can send bulk messages' });
+    }
+
+    const msgSubject = subject || 'New Message';
+    const sent = [];
+    const insertMsg = db.prepare(
+      'INSERT INTO messages (id, sender_id, recipient_id, subject, body) VALUES (?, ?, ?, ?, ?)'
+    );
+    const insertNotif = db.prepare(
+      'INSERT INTO notifications (id, user_id, type, title, message, link) VALUES (?, ?, \'message\', ?, ?, \'/dashboard/messages\')'
+    );
+
+    const senderName = req.user.name;
+
+    const transaction = db.transaction(() => {
+      for (const recipientId of targets) {
+        const msgId = uuidv4();
+        insertMsg.run(msgId, sender_id, recipientId, msgSubject, body);
+
+        const notifId = uuidv4();
+        insertNotif.run(notifId, recipientId, `New message from ${senderName}`, body.substring(0, 100));
+
+        sent.push({ id: msgId, recipient_id: recipientId });
+      }
+    });
+
+    transaction();
+
+    res.status(201).json({
+      success: true,
+      data: { sent_count: sent.length, messages: sent },
+    });
+  } catch (error) {
+    console.error('Error sending bulk message:', error);
+    res.status(500).json({ success: false, message: 'Failed to send messages' });
+  }
+});
+
 // GET /api/messages/unread/count - Get unread count
 router.get('/unread/count', auth, (req, res) => {
   try {

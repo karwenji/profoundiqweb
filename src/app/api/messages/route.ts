@@ -7,10 +7,28 @@ export async function GET(request: NextRequest) {
     const token = request.headers.get('authorization')?.replace('Bearer ', '')
     const userId = request.nextUrl.searchParams.get('userId')
     const unreadOnly = request.nextUrl.searchParams.get('unread')
+    const usersList = request.nextUrl.searchParams.get('users')
+    const coursesList = request.nextUrl.searchParams.get('courses')
+    const role = request.nextUrl.searchParams.get('role')
+    const courseId = request.nextUrl.searchParams.get('course_id')
+    const search = request.nextUrl.searchParams.get('search')
 
     let url = `${API_URL}/api/messages`
-    if (userId) url += `/${userId}`
-    else if (unreadOnly === 'count') url += '/unread/count'
+    if (userId) {
+      url += `/${userId}`
+    } else if (unreadOnly === 'count') {
+      url += '/unread/count'
+    } else if (usersList === 'true') {
+      url += '/users'
+      const params = new URLSearchParams()
+      if (role) params.set('role', role)
+      if (courseId) params.set('course_id', courseId)
+      if (search) params.set('search', search)
+      const qs = params.toString()
+      if (qs) url += `?${qs}`
+    } else if (coursesList === 'true') {
+      url += '/courses'
+    }
 
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -26,8 +44,10 @@ export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '')
     const body = await request.json()
+    const isBulk = body.recipient_ids || body.group_role || body.group_course_id
 
-    const response = await fetch(`${API_URL}/api/messages`, {
+    const endpoint = isBulk ? '/api/messages/bulk' : '/api/messages'
+    const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
