@@ -12,6 +12,9 @@ export interface User {
   role: UserRole;
   createdAt: string;
   isActive: boolean;
+  phone?: string;
+  bio?: string;
+  avatar?: string;
 }
 
 export const users: User[] = [
@@ -25,6 +28,8 @@ export const users: User[] = [
     role: 'super_admin',
     createdAt: new Date().toISOString(),
     isActive: true,
+    phone: '+254 700 000 000',
+    bio: 'Platform administrator and consultant.',
   },
   // Default admin account
   {
@@ -36,6 +41,8 @@ export const users: User[] = [
     role: 'admin',
     createdAt: new Date().toISOString(),
     isActive: true,
+    phone: '+254 711 000 000',
+    bio: 'Operations manager overseeing daily platform activities.',
   },
   // Default instructor account
   {
@@ -47,6 +54,8 @@ export const users: User[] = [
     role: 'instructor',
     createdAt: new Date().toISOString(),
     isActive: true,
+    phone: '+254 722 000 000',
+    bio: 'Senior instructor with expertise in professional development and leadership training.',
   },
   // Default student account
   {
@@ -58,6 +67,8 @@ export const users: User[] = [
     role: 'student',
     createdAt: new Date().toISOString(),
     isActive: true,
+    phone: '+254 733 000 000',
+    bio: 'Passionate learner focused on professional development and career growth.',
   },
 ];
 
@@ -97,6 +108,9 @@ export function getAllUsers(): Omit<User, 'password'>[] {
     role: u.role,
     createdAt: u.createdAt,
     isActive: u.isActive,
+    phone: u.phone,
+    bio: u.bio,
+    avatar: u.avatar,
   }));
 }
 
@@ -124,4 +138,13 @@ export function activateUser(userId: string): boolean {
     return true;
   }
   return false;
+}
+
+export function updateUser(userId: string, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'bio' | 'avatar' | 'password'>>): User | undefined {
+  const user = users.find(u => u.id === userId);
+  if (user) {
+    Object.assign(user, updates);
+    return { ...user };
+  }
+  return undefined;
 }

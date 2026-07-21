@@ -44,6 +44,8 @@ export interface User {
   avatar?: string;
   enrolledCourses: string[];
   createdAt: string;
+  phone?: string;
+  bio?: string;
 }
 
 export interface CartItem {

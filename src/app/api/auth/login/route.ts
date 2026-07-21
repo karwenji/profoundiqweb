@@ -39,6 +39,8 @@ export async function POST(request: Request) {
         name: user.name,
         email: user.email,
         role: user.role,
+        phone: user.phone,
+        bio: user.bio,
       },
     })
   } catch (error) {

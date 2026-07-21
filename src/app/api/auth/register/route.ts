@@ -62,6 +62,8 @@ export async function POST(request: Request) {
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,
+          phone: newUser.phone,
+          bio: newUser.bio,
         },
       },
       { status: 201 }

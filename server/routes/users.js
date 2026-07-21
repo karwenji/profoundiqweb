@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/me', authenticateToken, (req, res) => {
   try {
     const user = db.prepare(
-      'SELECT id, name, email, role, created_at FROM users WHERE id = ?'
+      'SELECT id, name, email, role, phone, bio, avatar, is_active, created_at FROM users WHERE id = ?'
     ).get(req.user.id);
     
     if (!user) {
@@ -25,7 +25,7 @@ router.get('/me', authenticateToken, (req, res) => {
 // Update profile
 router.put('/me', authenticateToken, async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, phone, bio, avatar, password } = req.body;
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     
     if (!user) {
@@ -38,11 +38,19 @@ router.put('/me', authenticateToken, async (req, res) => {
     }
 
     db.prepare(
-      'UPDATE users SET name = ?, email = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).run(name || user.name, email || user.email, hashedPassword, req.user.id);
+      'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).run(
+      name || user.name,
+      email || user.email,
+      phone != null ? phone : user.phone,
+      bio != null ? bio : user.bio,
+      avatar != null ? avatar : user.avatar,
+      hashedPassword,
+      req.user.id
+    );
 
     const updated = db.prepare(
-      'SELECT id, name, email, role, created_at FROM users WHERE id = ?'
+      'SELECT id, name, email, role, phone, bio, avatar, is_active, created_at FROM users WHERE id = ?'
     ).get(req.user.id);
 
     res.json({ success: true, data: updated });
@@ -56,7 +64,7 @@ router.put('/me', authenticateToken, async (req, res) => {
 router.get('/', authenticateToken, requireRole('admin', 'super_admin'), (req, res) => {
   try {
     const users = db.prepare(
-      'SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, name, email, role, phone, bio, avatar, is_active, created_at FROM users ORDER BY created_at DESC'
     ).all();
     res.json({ success: true, data: users });
   } catch (err) {
@@ -84,7 +92,7 @@ router.put('/:id/role', authenticateToken, requireRole('super_admin'), (req, res
     }
 
     const user = db.prepare(
-      'SELECT id, name, email, role, created_at FROM users WHERE id = ?'
+      'SELECT id, name, email, role, phone, bio, avatar, is_active, created_at FROM users WHERE id = ?'
     ).get(req.params.id);
 
     res.json({ success: true, data: user });

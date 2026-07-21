@@ -10,12 +10,15 @@ interface User {
   name: string
   email: string
   role: UserRole
+  phone?: string
+  bio?: string
 }
 
 interface AuthContextType {
   user: User | null
   login: (userData: User) => void
   logout: () => void
+  updateUser: (updates: Partial<User>) => void
   isLoading: boolean
 }
 
@@ -50,8 +53,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/auth/login')
   }
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser(prev => {
+      if (!prev) return prev
+      const updated = { ...prev, ...updates }
+      localStorage.setItem('user', JSON.stringify(updated))
+      return updated
+    })
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   )

@@ -42,6 +42,7 @@ const superAdminMenu: NavItem[] = [
   { label: 'Role Permissions', href: '/dashboard/super-admin/roles', icon: Shield },
   { label: 'System Settings', href: '/dashboard/super-admin/settings', icon: Settings },
   { label: 'Audit Logs', href: '/dashboard/super-admin/logs', icon: FileText },
+  { label: 'Profile', href: '/dashboard/profile', icon: User },
 ]
 
 const adminMenu: NavItem[] = [
@@ -53,6 +54,7 @@ const adminMenu: NavItem[] = [
   { label: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { label: 'Payments', href: '/dashboard/admin/payments', icon: CreditCard },
   { label: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
+  { label: 'Profile', href: '/dashboard/profile', icon: User },
 ]
 
 const instructorMenu: NavItem[] = [
@@ -64,6 +66,7 @@ const instructorMenu: NavItem[] = [
   { label: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { label: 'Earnings', href: '/dashboard/instructor/earnings', icon: DollarSign },
   { label: 'Messages', href: '/dashboard/instructor/messages', icon: MessageSquare },
+  { label: 'Profile', href: '/dashboard/profile', icon: User },
 ]
 
 const studentMenu: NavItem[] = [
