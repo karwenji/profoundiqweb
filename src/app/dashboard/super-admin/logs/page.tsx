@@ -64,7 +64,7 @@ function AuditLogsPage() {
 
 export default function AuditLogsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="audit_logs">
       <AuditLogsPage />
     </ProtectedRoute>
   )

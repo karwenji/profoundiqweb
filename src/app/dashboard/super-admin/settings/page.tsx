@@ -403,7 +403,7 @@ function SuperAdminSettingsPage() {
 
 export default function SuperAdminSettingsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="system_settings">
       <SuperAdminSettingsPage />
     </ProtectedRoute>
   )

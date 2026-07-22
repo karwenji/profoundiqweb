@@ -192,7 +192,7 @@ function SuperAdminSocialMediaPage() {
 
 export default function SuperAdminSocialMediaPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="system_settings">
       <SuperAdminSocialMediaPage />
     </ProtectedRoute>
   )

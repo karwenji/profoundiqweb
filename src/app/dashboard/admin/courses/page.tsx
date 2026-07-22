@@ -110,7 +110,7 @@ function AdminCoursesPage() {
 
 export default function AdminCoursesPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="manage_courses">
       <AdminCoursesPage />
     </ProtectedRoute>
   )

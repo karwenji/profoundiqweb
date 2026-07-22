@@ -69,7 +69,7 @@ function AdminInstructorsPage() {
 
 export default function AdminInstructorsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="manage_instructors">
       <AdminInstructorsPage />
     </ProtectedRoute>
   )

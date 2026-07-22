@@ -310,7 +310,7 @@ function SuperAdminReportsPage() {
 
 export default function SuperAdminReportsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_analytics">
       <SuperAdminReportsPage />
     </ProtectedRoute>
   )

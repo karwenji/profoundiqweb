@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ router.put('/me', authenticateToken, async (req, res) => {
 });
 
 // Get all users (admin only)
-router.get('/', authenticateToken, requireRole('admin', 'super_admin'), (req, res) => {
+router.get('/', authenticateToken, requireRole('admin', 'super_admin'), requirePermission('manage_users'), (req, res) => {
   try {
     const users = db.prepare(
       'SELECT id, name, email, role, phone, bio, avatar, is_active, created_at FROM users ORDER BY created_at DESC'
@@ -74,7 +75,7 @@ router.get('/', authenticateToken, requireRole('admin', 'super_admin'), (req, re
 });
 
 // Update user role (super_admin only)
-router.put('/:id/role', authenticateToken, requireRole('super_admin'), (req, res) => {
+router.put('/:id/role', authenticateToken, requireRole('super_admin'), requirePermission('manage_users'), (req, res) => {
   try {
     const { role } = req.body;
     const validRoles = ['student', 'instructor', 'admin', 'super_admin'];
@@ -103,7 +104,7 @@ router.put('/:id/role', authenticateToken, requireRole('super_admin'), (req, res
 });
 
 // Delete user (super_admin only)
-router.delete('/:id', authenticateToken, requireRole('super_admin'), (req, res) => {
+router.delete('/:id', authenticateToken, requireRole('super_admin'), requirePermission('manage_users'), (req, res) => {
   try {
     if (req.params.id === req.user.id) {
       return res.status(400).json({ error: 'Cannot delete yourself' });

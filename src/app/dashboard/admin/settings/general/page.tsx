@@ -191,7 +191,7 @@ function GeneralSettingsPage() {
 
 export default function GeneralSettingsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="system_settings">
       <GeneralSettingsPage />
     </ProtectedRoute>
   )

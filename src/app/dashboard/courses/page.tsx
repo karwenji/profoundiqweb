@@ -91,7 +91,7 @@ function StudentCoursesPage() {
 
 export default function StudentCoursesPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="enroll_courses">
       <StudentCoursesPage />
     </ProtectedRoute>
   )

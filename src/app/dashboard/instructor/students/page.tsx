@@ -75,7 +75,7 @@ function InstructorStudentsPage() {
 
 export default function InstructorStudentsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_students">
       <InstructorStudentsPage />
     </ProtectedRoute>
   )

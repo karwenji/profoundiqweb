@@ -238,7 +238,7 @@ function EditCoursePage() {
 
 export default function EditCoursePageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="manage_courses">
       <EditCoursePage />
     </ProtectedRoute>
   )

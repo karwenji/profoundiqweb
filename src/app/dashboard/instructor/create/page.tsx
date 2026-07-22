@@ -107,7 +107,7 @@ function CreateCoursePage() {
 
 export default function CreateCoursePageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="create_courses">
       <CreateCoursePage />
     </ProtectedRoute>
   )

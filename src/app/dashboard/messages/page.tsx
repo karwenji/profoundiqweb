@@ -298,7 +298,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="send_messages">
       <DashboardLayout>
         <div className="p-6 h-[calc(100vh-4rem)]">
           <div className="flex flex-col lg:flex-row gap-6 h-full">

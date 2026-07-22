@@ -257,7 +257,7 @@ function SuperAdminGeneralSettingsPage() {
 
 export default function SuperAdminGeneralSettingsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="system_settings">
       <SuperAdminGeneralSettingsPage />
     </ProtectedRoute>
   )

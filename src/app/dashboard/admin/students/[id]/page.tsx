@@ -164,7 +164,7 @@ function StudentProfilePage() {
 
 export default function StudentProfilePageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="student_management">
       <StudentProfilePage />
     </ProtectedRoute>
   )

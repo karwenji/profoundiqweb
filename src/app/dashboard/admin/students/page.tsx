@@ -76,7 +76,7 @@ function AdminStudentsPage() {
 
 export default function AdminStudentsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="student_management">
       <AdminStudentsPage />
     </ProtectedRoute>
   )

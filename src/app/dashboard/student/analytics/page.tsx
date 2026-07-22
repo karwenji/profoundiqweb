@@ -190,7 +190,7 @@ function StudentAnalyticsPage() {
 
 export default function StudentAnalyticsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_progress">
       <StudentAnalyticsPage />
     </ProtectedRoute>
   )

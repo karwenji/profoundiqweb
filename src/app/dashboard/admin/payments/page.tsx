@@ -140,7 +140,7 @@ function AdminPaymentsPage() {
 
 export default function AdminPaymentsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_reports">
       <AdminPaymentsPage />
     </ProtectedRoute>
   )

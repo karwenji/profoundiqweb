@@ -261,7 +261,7 @@ function AdminReportsPage() {
 
 export default function AdminReportsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_reports">
       <AdminReportsPage />
     </ProtectedRoute>
   )

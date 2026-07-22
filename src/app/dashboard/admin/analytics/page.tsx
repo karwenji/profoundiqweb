@@ -181,7 +181,7 @@ function AdminAnalyticsPage() {
 
 export default function AdminAnalyticsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_reports">
       <AdminAnalyticsPage />
     </ProtectedRoute>
   )

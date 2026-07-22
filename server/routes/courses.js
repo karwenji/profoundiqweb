@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { requireAnyPermission, requirePermission } = require('../middleware/permissions');
 
 const router = express.Router();
 
@@ -43,7 +44,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create course (instructor/admin only)
-router.post('/', authenticateToken, requireRole('instructor', 'admin', 'super_admin'), (req, res) => {
+router.post('/', authenticateToken, requireRole('instructor', 'admin', 'super_admin'), requireAnyPermission('manage_courses', 'create_courses'), (req, res) => {
   try {
     const { title, description, price, currency, category, thumbnail } = req.body;
     const id = uuidv4();
@@ -62,7 +63,7 @@ router.post('/', authenticateToken, requireRole('instructor', 'admin', 'super_ad
 });
 
 // Update course
-router.put('/:id', authenticateToken, requireRole('instructor', 'admin', 'super_admin'), (req, res) => {
+router.put('/:id', authenticateToken, requireRole('instructor', 'admin', 'super_admin'), requireAnyPermission('manage_courses', 'edit_own_courses'), (req, res) => {
   try {
     const { title, description, price, currency, category, thumbnail, published } = req.body;
     const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.id);

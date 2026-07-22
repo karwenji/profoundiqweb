@@ -4,6 +4,7 @@ const db = require('../database');
 const auth = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 const { requireRole } = require('../middleware/auth');
+const { requireAnyPermission } = require('../middleware/permissions');
 
 // GET /api/announcements - Get announcements for current user
 router.get('/', auth, (req, res) => {
@@ -36,7 +37,7 @@ router.get('/', auth, (req, res) => {
 });
 
 // POST /api/announcements - Create announcement (admin/super_admin only)
-router.post('/', auth, requireRole('admin', 'super_admin'), (req, res) => {
+router.post('/', auth, requireRole('admin', 'super_admin'), requireAnyPermission('system_settings', 'manage_users'), (req, res) => {
   try {
     const { title, body, target_roles, target_course_id, priority } = req.body;
     const created_by = req.user.id;
@@ -60,7 +61,7 @@ router.post('/', auth, requireRole('admin', 'super_admin'), (req, res) => {
 });
 
 // GET /api/announcements/all - Get all announcements (admin/super_admin only)
-router.get('/all', auth, requireRole('admin', 'super_admin'), (req, res) => {
+router.get('/all', auth, requireRole('admin', 'super_admin'), requireAnyPermission('system_settings', 'manage_users'), (req, res) => {
   try {
     const announcements = db.prepare(`
       SELECT a.*, u.name as created_by_name
@@ -78,7 +79,7 @@ router.get('/all', auth, requireRole('admin', 'super_admin'), (req, res) => {
 });
 
 // PATCH /api/announcements/:id - Update announcement (admin/super_admin only)
-router.patch('/:id', auth, requireRole('admin', 'super_admin'), (req, res) => {
+router.patch('/:id', auth, requireRole('admin', 'super_admin'), requireAnyPermission('system_settings', 'manage_users'), (req, res) => {
   try {
     const { title, body, target_roles, target_course_id, priority, is_active } = req.body;
 
@@ -110,7 +111,7 @@ router.patch('/:id', auth, requireRole('admin', 'super_admin'), (req, res) => {
 });
 
 // DELETE /api/announcements/:id - Delete announcement (admin/super_admin only)
-router.delete('/:id', auth, requireRole('admin', 'super_admin'), (req, res) => {
+router.delete('/:id', auth, requireRole('admin', 'super_admin'), requireAnyPermission('system_settings', 'manage_users'), (req, res) => {
   try {
     const result = db.prepare('DELETE FROM announcements WHERE id = ?').run(req.params.id);
     if (result.changes === 0) {

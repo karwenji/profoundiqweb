@@ -284,7 +284,7 @@ function WebhookSettingsPage() {
 
 export default function WebhookSettingsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="system_settings">
       <WebhookSettingsPage />
     </ProtectedRoute>
   )

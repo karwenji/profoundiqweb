@@ -351,7 +351,7 @@ function PaymentSettingsPage() {
 
 export default function PaymentSettingsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="system_settings">
       <PaymentSettingsPage />
     </ProtectedRoute>
   )

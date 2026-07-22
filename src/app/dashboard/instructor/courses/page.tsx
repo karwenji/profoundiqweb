@@ -76,7 +76,7 @@ function InstructorCoursesPage() {
 
 export default function InstructorCoursesPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permissions={['edit_own_courses', 'view_students']}>
       <InstructorCoursesPage />
     </ProtectedRoute>
   )

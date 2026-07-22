@@ -58,7 +58,7 @@ function AnalyticsPage() {
 
 export default function AnalyticsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_analytics">
       <AnalyticsPage />
     </ProtectedRoute>
   )

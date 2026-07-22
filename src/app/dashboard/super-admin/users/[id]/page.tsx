@@ -153,7 +153,7 @@ function UserProfilePage() {
 
 export default function UserProfilePageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="manage_users">
       <UserProfilePage />
     </ProtectedRoute>
   )

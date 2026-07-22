@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../database');
 const auth = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
+const { requirePermission } = require('../middleware/permissions');
 
 // GET /api/messages - Get conversations list
 router.get('/', auth, (req, res) => {
@@ -77,7 +78,7 @@ router.get('/:userId', auth, (req, res) => {
 });
 
 // POST /api/messages - Send a message
-router.post('/', auth, (req, res) => {
+router.post('/', auth, requirePermission('send_messages'), (req, res) => {
   try {
     const { recipient_id, subject, body, parent_id } = req.body;
     const sender_id = req.user.id;
@@ -133,7 +134,7 @@ router.delete('/:id', auth, (req, res) => {
 });
 
 // GET /api/messages/users - Get users by group for recipient picker
-router.get('/users', auth, (req, res) => {
+router.get('/users', auth, requirePermission('send_messages'), (req, res) => {
   try {
     const { role, course_id, search } = req.query;
     let query = 'SELECT id, name, email, role FROM users WHERE 1=1';
@@ -169,7 +170,7 @@ router.get('/users', auth, (req, res) => {
 });
 
 // GET /api/messages/courses - Get courses for course-based group selection
-router.get('/courses', auth, (req, res) => {
+router.get('/courses', auth, requireAnyPermission('send_messages', 'view_students'), (req, res) => {
   try {
     let query = 'SELECT id, title FROM courses';
     const params = [];
@@ -190,7 +191,7 @@ router.get('/courses', auth, (req, res) => {
 });
 
 // POST /api/messages/bulk - Send message to multiple recipients or a group
-router.post('/bulk', auth, (req, res) => {
+router.post('/bulk', auth, requirePermission('send_messages'), (req, res) => {
   try {
     const { recipient_ids, group_role, group_course_id, subject, body } = req.body;
     const sender_id = req.user.id;

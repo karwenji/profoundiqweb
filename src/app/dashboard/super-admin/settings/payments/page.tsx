@@ -351,7 +351,7 @@ function SuperAdminPaymentSettingsPage() {
 
 export default function SuperAdminPaymentSettingsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="system_settings">
       <SuperAdminPaymentSettingsPage />
     </ProtectedRoute>
   )

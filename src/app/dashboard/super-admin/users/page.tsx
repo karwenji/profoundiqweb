@@ -283,7 +283,7 @@ function UserManagementPage() {
 
 export default function UserManagementPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="manage_users">
       <UserManagementPage />
     </ProtectedRoute>
   )

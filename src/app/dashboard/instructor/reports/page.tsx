@@ -260,7 +260,7 @@ function InstructorReportsPage() {
 
 export default function InstructorReportsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_reports">
       <InstructorReportsPage />
     </ProtectedRoute>
   )

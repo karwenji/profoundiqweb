@@ -207,7 +207,7 @@ function AdminDashboard() {
 
 export default function AdminPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permissions={['manage_courses', 'manage_instructors', 'student_management']}>
       <AdminDashboard />
     </ProtectedRoute>
   )

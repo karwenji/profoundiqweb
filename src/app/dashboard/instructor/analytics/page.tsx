@@ -58,7 +58,7 @@ function InstructorAnalyticsPage() {
 
 export default function InstructorAnalyticsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_reports">
       <InstructorAnalyticsPage />
     </ProtectedRoute>
   )

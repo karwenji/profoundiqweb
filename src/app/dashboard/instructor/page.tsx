@@ -208,7 +208,7 @@ function InstructorDashboard() {
 
 export default function InstructorPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permissions={['create_courses', 'view_students', 'edit_own_courses']}>
       <InstructorDashboard />
     </ProtectedRoute>
   )

@@ -168,7 +168,7 @@ function InstructorEarningsPage() {
 
 export default function InstructorEarningsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_reports">
       <InstructorEarningsPage />
     </ProtectedRoute>
   )

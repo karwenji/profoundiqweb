@@ -380,7 +380,7 @@ function RolePermissionsPage() {
 
 export default function RolePermissionsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="manage_roles">
       <RolePermissionsPage />
     </ProtectedRoute>
   )

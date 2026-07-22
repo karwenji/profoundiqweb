@@ -58,7 +58,7 @@ function StudentCertificatesPage() {
 
 export default function StudentCertificatesPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="download_certificates">
       <StudentCertificatesPage />
     </ProtectedRoute>
   )

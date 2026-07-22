@@ -265,7 +265,7 @@ function SuperAdminDashboard() {
 
 export default function SuperAdminPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="view_analytics">
       <SuperAdminDashboard />
     </ProtectedRoute>
   )

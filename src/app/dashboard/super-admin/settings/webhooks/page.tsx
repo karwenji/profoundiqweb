@@ -284,7 +284,7 @@ function SuperAdminWebhookSettingsPage() {
 
 export default function SuperAdminWebhookSettingsPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="system_settings">
       <SuperAdminWebhookSettingsPage />
     </ProtectedRoute>
   )

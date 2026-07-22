@@ -84,7 +84,7 @@ function StudentBillingPage() {
 
 export default function StudentBillingPageWrapper() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission="access_billing">
       <StudentBillingPage />
     </ProtectedRoute>
   )
