@@ -192,9 +192,9 @@ function SupportPage() {
                     <MessageSquare className="h-4 w-4 text-primary" />
                     <span>Send us a message via the Messages page</span>
                   </p>
-                  <p><strong>Email:</strong> support@profoundiq.com</p>
-                  <p><strong>Phone:</strong> +234 800 123 4567</p>
-                  <p><strong>Hours:</strong> Mon-Fri, 9am - 6pm WAT</p>
+                  <p><strong>Email:</strong> support@profoundiqconsulting.com</p>
+                  <p><strong>Phone:</strong> +254727374055</p>
+                  <p><strong>Hours:</strong> Mon-Fri, 9am - 6pm EAT</p>
                 </div>
               </CardContent>
             </Card>
