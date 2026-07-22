@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
@@ -29,156 +29,103 @@ import {
   Check,
   CheckCheck,
   Loader2,
-  Trash2,
   X,
-  ChevronDown,
   Filter,
+  Inbox,
+  PenSquare,
 } from 'lucide-react'
-
-interface Message {
-  id: string
-  sender_id: string
-  recipient_id: string
-  subject: string
-  body: string
-  is_read: number
-  created_at: string
-  sender_name?: string
-  sender_role?: string
-}
-
-interface Conversation {
-  last_message_id: string
-  other_user_id: string
-  other_user_name: string
-  other_user_role: string
-  subject: string
-  last_message: string
-  last_message_at: string
-  is_read: number
-  unread_count: number
-}
-
-interface UserOption {
-  id: string
-  name: string
-  email: string
-  role: string
-}
-
-interface CourseOption {
-  id: string
-  title: string
-}
+import type { Conversation, Message as MessageType, UserOption } from '@/types/communications'
 
 type RecipientMode = 'individual' | 'role' | 'course'
 
 export default function MessagesPage() {
   const { user } = useAuth()
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
-  const [threadMessages, setThreadMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState('')
-  const [isComposing, setIsComposing] = useState(false)
-  const [composeSubject, setComposeSubject] = useState('')
-  const [composeBody, setComposeBody] = useState('')
+  const [threadMessages, setThreadMessages] = useState<MessageType[]>([])
+  const [reply, setReply] = useState('')
+  const [mode, setMode] = useState<'inbox' | 'compose'>('inbox')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Compose recipient state
+  const [composeSubject, setComposeSubject] = useState('')
+  const [composeBody, setComposeBody] = useState('')
   const [recipientMode, setRecipientMode] = useState<RecipientMode>('individual')
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [selectedRole, setSelectedRole] = useState('')
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [userSearch, setUserSearch] = useState('')
   const [availableUsers, setAvailableUsers] = useState<UserOption[]>([])
-  const [availableCourses, setAvailableCourses] = useState<CourseOption[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
-  const [sentSuccess, setSentSuccess] = useState<string | null>(null)
+  const [sentSuccess, setSentSuccess] = useState(false)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const api = useCallback(
+    async (path: string, options: RequestInit = {}) => {
+      const res = await fetch(`/api/communications${path}`, {
+        ...options,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(options.headers || {}),
+        },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Request failed')
+      return data
+    },
+    [token]
+  )
 
   useEffect(() => {
-    fetchConversations()
+    loadConversations()
   }, [])
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchThread(selectedConversation)
-    }
+    if (selectedConversation) loadThread(selectedConversation)
   }, [selectedConversation])
 
   useEffect(() => {
-    scrollToBottom()
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [threadMessages])
 
-  const fetchConversations = async () => {
+  const loadConversations = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/messages', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const result = await response.json()
-      if (result.success) {
-        setConversations(result.data || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch conversations:', error)
+      const data = await api('?resource=conversations')
+      setConversations(data.data || [])
+    } catch (e) {
+      console.error(e)
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchAvailableUsers = async (search?: string, role?: string, courseId?: string) => {
+  const loadThread = async (conversationId: string) => {
+    try {
+      const data = await api(`?resource=messages&conversation_id=${conversationId}`)
+      setThreadMessages(data.data || [])
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const loadAvailableUsers = async (search = '', role = 'all', courseId?: string) => {
     setUsersLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      const params = new URLSearchParams({ users: 'true' })
-      if (search) params.set('search', search)
-      if (role && role !== 'all') params.set('role', role)
+      const params = new URLSearchParams({ resource: 'users', search, role })
       if (courseId) params.set('course_id', courseId)
-
-      const response = await fetch(`/api/messages?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const result = await response.json()
-      if (result.success) {
-        setAvailableUsers(result.data || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch users:', error)
+      const data = await api(`?${params.toString()}`)
+      setAvailableUsers(data.data || [])
+    } catch (e) {
+      console.error(e)
     } finally {
       setUsersLoading(false)
     }
   }
 
-  const fetchAvailableCourses = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/messages?courses=true', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const result = await response.json()
-      if (result.success) {
-        setAvailableCourses(result.data || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch courses:', error)
-    }
-  }
-
-  const toggleUserSelection = (userId: string) => {
-    setSelectedUserIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    )
-  }
-
   const resetCompose = () => {
-    setIsComposing(false)
+    setMode('inbox')
     setComposeSubject('')
     setComposeBody('')
     setSelectedUserIds([])
@@ -186,43 +133,30 @@ export default function MessagesPage() {
     setSelectedCourseId('')
     setUserSearch('')
     setRecipientMode('individual')
-    setSentSuccess(null)
+    setSentSuccess(false)
   }
 
-  const fetchThread = async (userId: string) => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/messages?userId=${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const result = await response.json()
-      if (result.success) {
-        setThreadMessages(result.data || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch thread:', error)
-    }
-  }
-
-  const sendMessage = async () => {
-    if (!newMessage.trim() && !composeBody.trim()) return
+  const send = async () => {
+    const messageBody = mode === 'compose' ? composeBody : reply
+    if (!messageBody.trim()) return
 
     setSending(true)
     try {
-      const token = localStorage.getItem('token')
-
-      if (isComposing) {
-        // Build payload based on recipient mode
-        let payload: Record<string, unknown> = { subject: composeSubject, body: composeBody }
-
+      if (mode === 'compose') {
+        const payload: Record<string, unknown> = {
+          action: 'send_message',
+          subject: composeSubject,
+          body: composeBody,
+        }
         if (recipientMode === 'individual') {
-          if (selectedUserIds.length === 1) {
-            payload.recipient_id = selectedUserIds[0]
-          } else if (selectedUserIds.length > 1) {
-            payload.recipient_ids = selectedUserIds
-          } else {
+          if (selectedUserIds.length === 0) {
             setSending(false)
             return
+          }
+          if (selectedUserIds.length === 1) {
+            payload.recipient_id = selectedUserIds[0]
+          } else {
+            payload.recipient_ids = selectedUserIds
           }
         } else if (recipientMode === 'role') {
           payload.group_role = selectedRole
@@ -232,86 +166,74 @@ export default function MessagesPage() {
           if (selectedUserIds.length > 0) payload.recipient_ids = selectedUserIds
         }
 
-        const response = await fetch('/api/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        })
-
-        const result = await response.json()
-        if (result.success) {
-          const count = result.data?.sent_count || 1
-          setSentSuccess(`Message sent to ${count} recipient${count > 1 ? 's' : ''}!`)
-          setTimeout(() => {
-            resetCompose()
-            fetchConversations()
-          }, 2000)
-        }
-      } else {
-        // Reply in thread
-        const payload = { recipient_id: selectedConversation, subject: 'Re: Message', body: newMessage }
-        const response = await fetch('/api/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        })
-
-        const result = await response.json()
-        if (result.success) {
-          setNewMessage('')
-          fetchConversations()
-          if (selectedConversation) fetchThread(selectedConversation)
-        }
+        const result = await api('', { method: 'POST', body: JSON.stringify(payload) })
+        setSentSuccess(true)
+        setTimeout(() => {
+          resetCompose()
+          loadConversations()
+          const newConversationId = result.data?.conversation?.id
+          if (newConversationId) setSelectedConversation(newConversationId)
+        }, 800)
+      } else if (selectedConversation) {
+        await api(
+          `?resource=messages&conversation_id=${selectedConversation}`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'send_message',
+              conversation_id: selectedConversation,
+              body: messageBody,
+            }),
+          }
+        )
+        setReply('')
+        loadConversations()
+        loadThread(selectedConversation)
       }
-    } catch (error) {
-      console.error('Failed to send message:', error)
+    } catch (e) {
+      console.error(e)
     } finally {
       setSending(false)
     }
   }
 
-  const filteredConversations = conversations.filter(
+  const filtered = conversations.filter(
     (c) =>
-      c.other_user_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.subject.toLowerCase().includes(searchQuery.toLowerCase())
+      (c.other_user_name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.subject ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.last_message ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
+    const nowIso = new Date()
+    const diffMs = nowIso.getTime() - date.getTime()
     const diffMins = Math.floor(diffMs / 60000)
     const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
+    const diffDays = Math.floor(diffMs / 86_400_000)
     if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffMins < 60) return `${diffMins}m`
+    if (diffHours < 24) return `${diffHours}h`
+    if (diffDays < 7) return `${diffDays}d`
     return date.toLocaleDateString()
   }
+
+  const selectedConvo = selectedConversation ? conversations.find((c) => c.id === selectedConversation) : null
 
   return (
     <ProtectedRoute permission="send_messages">
       <DashboardLayout>
         <div className="p-6 h-[calc(100vh-4rem)]">
           <div className="flex flex-col lg:flex-row gap-6 h-full">
-            {/* Conversations List */}
-            <div className={`lg:w-1/3 flex flex-col gap-4 ${selectedConversation || isComposing ? 'hidden lg:flex' : 'flex'}`}>
+            <div className={`lg:w-1/3 flex flex-col gap-4 ${selectedConversation || mode === 'compose' ? 'hidden lg:flex' : 'flex'}`}>
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <MessageSquare className="h-6 w-6 text-primary" />
+                  <Inbox className="h-6 w-6 text-primary" />
                   Messages
                 </h1>
-                <Button onClick={() => { setIsComposing(true); setSelectedConversation(null) }} size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  New
+                <Button onClick={() => { resetCompose(); setMode('compose') }} size="sm">
+                  <PenSquare className="h-4 w-4 mr-1" />
+                  Compose
                 </Button>
               </div>
 
@@ -330,27 +252,24 @@ export default function MessagesPage() {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
-                ) : filteredConversations.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No conversations yet</p>
-                    <Button variant="outline" className="mt-3" onClick={() => setIsComposing(true)}>
-                      Start a conversation
-                    </Button>
-                  </div>
+                ) : filtered.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center text-gray-500">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">No conversations yet</p>
+                      <Button variant="outline" className="mt-3" size="sm" onClick={() => { resetCompose(); setMode('compose') }}>
+                        Start a conversation
+                      </Button>
+                    </CardContent>
+                  </Card>
                 ) : (
-                  filteredConversations.map((conv) => (
+                  filtered.map((conv) => (
                     <Card
-                      key={conv.other_user_id}
+                      key={conv.id}
                       className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedConversation === conv.other_user_id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-transparent'
+                        selectedConversation === conv.id ? 'border-primary bg-primary/5' : 'border-transparent'
                       }`}
-                      onClick={() => {
-                        setSelectedConversation(conv.other_user_id)
-                        setIsComposing(false)
-                      }}
+                      onClick={() => { setSelectedConversation(conv.id); setMode('inbox') }}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-1">
@@ -360,13 +279,13 @@ export default function MessagesPage() {
                             </div>
                             <div>
                               <p className="font-semibold text-sm text-gray-900">{conv.other_user_name}</p>
-                              <p className="text-xs text-gray-500 capitalize">{conv.other_user_role.replace('_', ' ')}</p>
+                              <p className="text-xs text-gray-500 capitalize">{(conv.other_user_role ?? '').replace('_', ' ')}</p>
                             </div>
                           </div>
-                          <span className="text-xs text-gray-400 whitespace-nowrap">{formatTime(conv.last_message_at)}</span>
+                          <span className="text-xs text-gray-400 whitespace-nowrap">{conv.last_message_at ? formatTime(conv.last_message_at) : ''}</span>
                         </div>
                         <p className="text-sm text-gray-600 truncate">{conv.last_message}</p>
-                        {conv.unread_count > 0 && (
+                        {(conv.unread_count ?? 0) > 0 && (
                           <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 mt-2 text-xs font-bold text-white bg-primary rounded-full">
                             {conv.unread_count}
                           </span>
@@ -378,34 +297,32 @@ export default function MessagesPage() {
               </div>
             </div>
 
-            {/* Message Thread / Compose */}
-            <div className={`lg:w-2/3 flex flex-col ${!selectedConversation && !isComposing ? 'hidden lg:flex' : 'flex'}`}>
-              {isComposing ? (
+            <div className={`lg:w-2/3 flex flex-col ${!selectedConversation && mode !== 'compose' ? 'hidden lg:flex' : 'flex'}`}>
+              {mode === 'compose' ? (
                 <Card className="flex-1 overflow-y-auto">
                   <CardContent className="pt-6 pb-6 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="icon" onClick={resetCompose} className="lg:hidden">
+                        <Button variant="ghost" size="icon" onClick={() => { resetCompose(); setMode('inbox') }} className="lg:hidden">
                           <ArrowLeft className="h-5 w-5" />
                         </Button>
                         <h2 className="text-xl font-bold text-gray-900">New Message</h2>
                       </div>
                       {sentSuccess && (
-                        <span className="text-sm font-medium text-green-600 bg-green-50 px-3 py-1 rounded-full animate-in fade-in duration-300">
-                          ✓ {sentSuccess}
+                        <span className="text-sm font-medium text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                          Sent
                         </span>
                       )}
                     </div>
 
                     <div className="space-y-5 flex-1">
-                      {/* Recipient Mode Selector */}
                       <div className="space-y-2">
                         <Label>Send To</Label>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Button
                             variant={recipientMode === 'individual' ? 'default' : 'outline'}
                             size="sm"
-                            onClick={() => { setRecipientMode('individual'); setSelectedRole(''); setSelectedCourseId(''); fetchAvailableUsers() }}
+                            onClick={() => { setRecipientMode('individual'); setSelectedRole(''); setSelectedCourseId(''); loadAvailableUsers() }}
                           >
                             <User className="h-4 w-4 mr-1" />
                             Individual
@@ -415,7 +332,7 @@ export default function MessagesPage() {
                               <Button
                                 variant={recipientMode === 'role' ? 'default' : 'outline'}
                                 size="sm"
-                                onClick={() => { setRecipientMode('role'); setSelectedUserIds([]); }}
+                                onClick={() => { setRecipientMode('role'); setSelectedUserIds([]) }}
                               >
                                 <Users className="h-4 w-4 mr-1" />
                                 By Role
@@ -423,7 +340,7 @@ export default function MessagesPage() {
                               <Button
                                 variant={recipientMode === 'course' ? 'default' : 'outline'}
                                 size="sm"
-                                onClick={() => { setRecipientMode('course'); setSelectedUserIds([]); fetchAvailableCourses() }}
+                                onClick={() => { setRecipientMode('course'); setSelectedUserIds([]); }}
                               >
                                 <GraduationCap className="h-4 w-4 mr-1" />
                                 Course Students
@@ -433,20 +350,19 @@ export default function MessagesPage() {
                         </div>
                       </div>
 
-                      {/* Role Group Selector */}
                       {recipientMode === 'role' && (
                         <div className="space-y-2">
                           <Label>Select User Group</Label>
                           <Select value={selectedRole} onValueChange={(val) => { setSelectedRole(val); setSelectedUserIds([]) }}>
                             <SelectTrigger>
-                              <SelectValue placeholder="Choose a user group..." />
+                              <SelectValue placeholder="Choose a group..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="student">All Students</SelectItem>
-                              <SelectItem value="instructor">All Instructors</SelectItem>
-                              <SelectItem value="admin">All Admins</SelectItem>
+                              <SelectItem value="student">Students</SelectItem>
+                              <SelectItem value="instructor">Instructors</SelectItem>
+                              <SelectItem value="admin">Admins</SelectItem>
                               {user?.role === 'super_admin' && (
-                                <SelectItem value="super_admin">All Super Admins</SelectItem>
+                                <SelectItem value="super_admin">Super Admins</SelectItem>
                               )}
                             </SelectContent>
                           </Select>
@@ -459,7 +375,6 @@ export default function MessagesPage() {
                         </div>
                       )}
 
-                      {/* Course Group Selector */}
                       {recipientMode === 'course' && (
                         <div className="space-y-2">
                           <Label>Select Course</Label>
@@ -468,62 +383,46 @@ export default function MessagesPage() {
                               <SelectValue placeholder="Choose a course..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {availableCourses.map((course) => (
-                                <SelectItem key={course.id} value={course.id}>
-                                  {course.title}
-                                </SelectItem>
-                              ))}
+                              <SelectItem value="all">All courses</SelectItem>
                             </SelectContent>
                           </Select>
-                          {selectedCourseId && (
-                            <p className="text-xs text-gray-500 flex items-center gap-1">
-                              <GraduationCap className="h-3 w-3" />
-                              Message will be sent to all students enrolled in this course
-                            </p>
-                          )}
                         </div>
                       )}
 
-                      {/* Individual User Picker / Additional Recipients for Groups */}
                       <div className="space-y-2">
                         <Label>
-                          {recipientMode === 'individual'
-                            ? 'Select Recipients'
-                            : 'Additional Recipients (optional)'}
+                          {recipientMode === 'individual' ? 'Select Recipients' : 'Additional Recipients'}
                         </Label>
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
-                            placeholder="Search users by name or email..."
+                            placeholder="Search users..."
                             value={userSearch}
-                            onChange={(e) => {
-                              setUserSearch(e.target.value)
-                              const params: Record<string, string> = {}
-                              if (recipientMode === 'role' && selectedRole) params.role = selectedRole
-                              if (recipientMode === 'course' && selectedCourseId) params.course_id = selectedCourseId
-                              fetchAvailableUsers(e.target.value, params.role, params.course_id)
+                            onChange={async (e) => {
+                              const value = e.target.value
+                              setUserSearch(value)
+                              const roleParam = recipientMode === 'role' && selectedRole ? selectedRole : 'all'
+                              const courseParam = recipientMode === 'course' && selectedCourseId ? selectedCourseId : undefined
+                              await loadAvailableUsers(value, roleParam, courseParam)
                             }}
-                            onFocus={() => {
+                            onFocus={async () => {
                               if (availableUsers.length === 0) {
-                                const params: Record<string, string> = {}
-                                if (recipientMode === 'role' && selectedRole) params.role = selectedRole
-                                if (recipientMode === 'course' && selectedCourseId) params.course_id = selectedCourseId
-                                fetchAvailableUsers('', params.role, params.course_id)
+                                const roleParam = recipientMode === 'role' && selectedRole ? selectedRole : 'all'
+                                await loadAvailableUsers('', roleParam)
                               }
                             }}
                             className="pl-10"
                           />
                         </div>
 
-                        {/* Selected Users Chips */}
                         {selectedUserIds.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {selectedUserIds.map((id) => {
-                              const u = availableUsers.find((au) => au.id === id)
+                              const found = availableUsers.find((u) => u.id === id)
                               return (
                                 <span key={id} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full">
-                                  {u?.name || id}
-                                  <button onClick={() => toggleUserSelection(id)} className="hover:text-primary/70">
+                                  {found?.name || id}
+                                  <button onClick={() => setSelectedUserIds((prev) => prev.filter((x) => x !== id))} className="hover:text-primary/70">
                                     <X className="h-3 w-3" />
                                   </button>
                                 </span>
@@ -532,7 +431,6 @@ export default function MessagesPage() {
                           </div>
                         )}
 
-                        {/* User List Dropdown */}
                         {(userSearch || recipientMode !== 'individual') && availableUsers.length > 0 && (
                           <div className="border rounded-lg max-h-48 overflow-y-auto divide-y">
                             {usersLoading ? (
@@ -545,7 +443,7 @@ export default function MessagesPage() {
                                 .map((u) => (
                                   <button
                                     key={u.id}
-                                    onClick={() => toggleUserSelection(u.id)}
+                                    onClick={() => setSelectedUserIds((prev) => [...prev, u.id])}
                                     className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left transition-colors"
                                   >
                                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -555,9 +453,7 @@ export default function MessagesPage() {
                                       <p className="text-sm font-medium text-gray-900 truncate">{u.name}</p>
                                       <p className="text-xs text-gray-500 truncate">{u.email}</p>
                                     </div>
-                                    <span className="text-[10px] text-gray-400 capitalize flex-shrink-0">
-                                      {u.role.replace('_', ' ')}
-                                    </span>
+                                    <span className="text-[10px] text-gray-400 capitalize flex-shrink-0">{u.role.replace('_', ' ')}</span>
                                   </button>
                                 ))
                             )}
@@ -565,28 +461,16 @@ export default function MessagesPage() {
                         )}
                       </div>
 
-                      {/* Subject */}
                       <div className="space-y-2">
                         <Label>Subject</Label>
-                        <Input
-                          value={composeSubject}
-                          onChange={(e) => setComposeSubject(e.target.value)}
-                          placeholder="Message subject"
-                        />
+                        <Input value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} placeholder="Message subject" />
                       </div>
 
-                      {/* Body */}
                       <div className="space-y-2 flex-1">
                         <Label>Message</Label>
-                        <Textarea
-                          value={composeBody}
-                          onChange={(e) => setComposeBody(e.target.value)}
-                          placeholder="Type your message..."
-                          className="min-h-[150px] resize-none"
-                        />
+                        <Textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder="Type your message..." className="min-h-[150px] resize-none" />
                       </div>
 
-                      {/* Recipient Summary & Send */}
                       <div className="border-t pt-4 space-y-3">
                         <div className="text-xs text-gray-500">
                           {recipientMode === 'individual' && selectedUserIds.length > 0 && (
@@ -600,7 +484,7 @@ export default function MessagesPage() {
                           )}
                         </div>
                         <Button
-                          onClick={sendMessage}
+                          onClick={send}
                           disabled={
                             sending ||
                             !composeBody.trim() ||
@@ -618,39 +502,28 @@ export default function MessagesPage() {
                           {recipientMode === 'individual' && selectedUserIds.length > 1
                             ? `Send to ${selectedUserIds.length} Recipients`
                             : recipientMode !== 'individual'
-                            ? 'Send to Group'
-                            : 'Send Message'}
+                              ? 'Send to Group'
+                              : 'Send Message'}
                         </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ) : selectedConversation ? (
+              ) : selectedConvo ? (
                 <Card className="flex-1 flex flex-col overflow-hidden">
-                  {/* Thread Header */}
                   <div className="p-4 border-b flex items-center gap-3 bg-gray-50">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setSelectedConversation(null)}
-                      className="lg:hidden"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedConversation(null)} className="lg:hidden">
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900">
-                        {conversations.find((c) => c.other_user_id === selectedConversation)?.other_user_name || 'User'}
-                      </p>
-                      <p className="text-xs text-gray-500 capitalize">
-                        {conversations.find((c) => c.other_user_id === selectedConversation)?.other_user_role.replace('_', ' ')}
-                      </p>
+                      <p className="font-bold text-gray-900">{selectedConvo.other_user_name}</p>
+                      <p className="text-xs text-gray-500 capitalize">{(selectedConvo.other_user_role ?? '').replace('_', ' ')}</p>
                     </div>
                   </div>
 
-                  {/* Messages */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
                     {threadMessages.length === 0 ? (
                       <div className="text-center py-12 text-gray-400">
@@ -663,9 +536,7 @@ export default function MessagesPage() {
                           <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                             <div
                               className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                                isMine
-                                  ? 'bg-primary text-white rounded-br-sm'
-                                  : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+                                isMine ? 'bg-primary text-white rounded-br-sm' : 'bg-gray-100 text-gray-900 rounded-bl-sm'
                               }`}
                             >
                               {!isMine && (
@@ -675,9 +546,7 @@ export default function MessagesPage() {
                               <div className={`flex items-center gap-1 mt-1 text-[10px] ${isMine ? 'text-white/70' : 'text-gray-400'}`}>
                                 <Clock className="h-3 w-3" />
                                 <span>{formatTime(msg.created_at)}</span>
-                                {isMine && (
-                                  msg.is_read ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />
-                                )}
+                                {isMine && (msg.status === 'read' ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />)}
                               </div>
                             </div>
                           </div>
@@ -687,22 +556,21 @@ export default function MessagesPage() {
                     <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Reply Input */}
                   <div className="p-4 border-t bg-gray-50">
                     <div className="flex gap-2">
                       <Input
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        value={reply}
+                        onChange={(e) => setReply(e.target.value)}
                         placeholder="Type a reply..."
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault()
-                            sendMessage()
+                            send()
                           }
                         }}
                         className="flex-1"
                       />
-                      <Button onClick={sendMessage} disabled={sending || !newMessage.trim()}>
+                      <Button onClick={send} disabled={sending || !reply.trim()}>
                         {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       </Button>
                     </div>

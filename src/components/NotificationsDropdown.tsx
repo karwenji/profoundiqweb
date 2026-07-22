@@ -3,17 +3,19 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { Bell, Check, MessageSquare, UserPlus, CreditCard, AlertCircle, Loader2, Trash2, CheckCheck } from 'lucide-react'
-
-interface Notification {
-  id: string
-  type: string
-  title: string
-  message: string
-  link: string | null
-  is_read: number
-  created_at: string
-}
+import { getUnreadNotificationCount } from '@/lib/communications'
+import {
+  Bell,
+  Check,
+  MessageSquare,
+  UserPlus,
+  CreditCard,
+  AlertCircle,
+  Loader2,
+  Trash2,
+  CheckCheck,
+} from 'lucide-react'
+import type { Notification } from '@/types/communications'
 
 export default function NotificationsDropdown() {
   const { user } = useAuth()
@@ -24,116 +26,117 @@ export default function NotificationsDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications()
-      const interval = setInterval(fetchNotifications, 30000)
-      return () => clearInterval(interval)
-    }
+    if (!user) return
+    load()
+    const interval = setInterval(load, 30_000)
+    return () => clearInterval(interval)
   }, [user])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const fetchNotifications = async () => {
+  const load = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/notifications', {
+      const res = await fetch('/api/communications?resource=notifications', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      const result = await response.json()
-      if (result.success) {
-        setNotifications(result.data || [])
-        setUnreadCount((result.data || []).filter((n: Notification) => n.is_read === 0).length)
+      const data = await res.json()
+      if (data.success) {
+        setNotifications(data.data || [])
+        setUnreadCount((data.data || []).filter((n: Notification) => !n.is_read).length)
       }
     } catch (error) {
-      // Silently fail - notifications are non-critical
+      console.error('Failed to load notifications', error)
     }
   }
 
   const markAsRead = async (id: string) => {
     try {
       const token = localStorage.getItem('token')
-      await fetch('/api/notifications', {
+      await fetch('/api/communications', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ notification_id: id }),
       })
-      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n)))
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)))
       setUnreadCount((prev) => Math.max(0, prev - 1))
     } catch (error) {
-      console.error('Failed to mark notification as read:', error)
+      console.error('Failed to mark notification as read', error)
     }
   }
 
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token')
-      await fetch('/api/notifications', {
+      await fetch('/api/communications', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ markAllRead: true }),
+        body: JSON.stringify({ mark_all_read: true }),
       })
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })))
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
       setUnreadCount(0)
     } catch (error) {
-      console.error('Failed to mark all as read:', error)
+      console.error('Failed to mark all as read', error)
     }
   }
 
   const deleteNotification = async (id: string) => {
     try {
       const token = localStorage.getItem('token')
-      await fetch('/api/notifications', {
+      await fetch('/api/communications', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ notification_id: id }),
       })
       setNotifications((prev) => prev.filter((n) => n.id !== id))
       setUnreadCount((prev) => Math.max(0, prev - 1))
     } catch (error) {
-      console.error('Failed to delete notification:', error)
+      console.error('Failed to delete notification', error)
     }
   }
 
   const clearReadNotifications = async () => {
     try {
       const token = localStorage.getItem('token')
-      await fetch('/api/notifications', {
+      await fetch('/api/communications', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ clearRead: true }),
+        body: JSON.stringify({ clear_read: true }),
       })
-      setNotifications((prev) => prev.filter((n) => n.is_read === 0))
+      setNotifications((prev) => prev.filter((n) => !n.is_read))
     } catch (error) {
-      console.error('Failed to clear notifications:', error)
+      console.error('Failed to clear notifications', error)
     }
   }
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'message': return <MessageSquare className="h-4 w-4 text-blue-500" />
-      case 'enrollment': return <UserPlus className="h-4 w-4 text-green-500" />
-      case 'payment': return <CreditCard className="h-4 w-4 text-yellow-500" />
-      default: return <AlertCircle className="h-4 w-4 text-gray-500" />
+      case 'message':
+        return <MessageSquare className="h-4 w-4 text-blue-500" />
+      case 'enrollment':
+        return <UserPlus className="h-4 w-4 text-green-500" />
+      case 'payment':
+        return <CreditCard className="h-4 w-4 text-yellow-500" />
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />
     }
   }
 
@@ -154,7 +157,13 @@ export default function NotificationsDropdown() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => { setIsOpen(!isOpen); if (!isOpen) fetchNotifications() }}
+        onClick={() => {
+          setIsOpen(!isOpen)
+          if (!isOpen) {
+            setLoading(true)
+            load().finally(() => setLoading(false))
+          }
+        }}
         className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
         aria-label="Notifications"
       >
@@ -170,14 +179,12 @@ export default function NotificationsDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border z-50 overflow-hidden">
           <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
             <div>
               <h3 className="font-bold text-gray-900">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">
-                  {unreadCount} new
-                </span>
+                <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">{unreadCount} new</span>
               )}
             </div>
             <div className="flex gap-1">
@@ -190,7 +197,7 @@ export default function NotificationsDropdown() {
                   <CheckCheck className="h-4 w-4" />
                 </button>
               )}
-              {notifications.some((n) => n.is_read === 1) && (
+              {notifications.some((n) => n.is_read) && (
                 <button
                   onClick={(e) => { e.stopPropagation(); clearReadNotifications() }}
                   className="text-xs text-gray-500 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-gray-100"
@@ -217,27 +224,21 @@ export default function NotificationsDropdown() {
                 <div
                   key={notif.id}
                   className={`p-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${
-                    notif.is_read === 0 ? 'bg-blue-50/50' : ''
+                    !notif.is_read ? 'bg-blue-50/50' : ''
                   }`}
                   onClick={() => {
                     markAsRead(notif.id)
-                    if (notif.link) {
-                      window.location.href = notif.link
-                    }
+                    if (notif.link) window.location.href = notif.link
                   }}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex-shrink-0">{getIcon(notif.type)}</div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${notif.is_read === 0 ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                        {notif.title}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{notif.message}</p>
+                      <p className={`text-sm ${!notif.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{notif.title}</p>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{notif.body}</p>
                       <p className="text-[10px] text-gray-400 mt-1">{formatTime(notif.created_at)}</p>
                     </div>
-                    {notif.is_read === 0 && (
-                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-2" />
-                    )}
+                    {!notif.is_read && <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-2" />}
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id) }}
                       className="text-gray-400 hover:text-red-600 flex-shrink-0"

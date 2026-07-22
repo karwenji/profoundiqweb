@@ -42,13 +42,14 @@ function SupportPage() {
       const token = localStorage.getItem('token')
       const subjectLine = `[${category.toUpperCase()}] ${subject}`
 
-      const response = await fetch('/api/messages', {
+      const response = await fetch('/api/communications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          action: 'send_message',
           recipient_id: 'ad-001',
           subject: subjectLine,
           body: message,
@@ -57,7 +58,7 @@ function SupportPage() {
 
       const result = await response.json()
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to send support ticket')
+        throw new Error(result.error || 'Failed to send support ticket')
       }
 
       setSuccess(true)
