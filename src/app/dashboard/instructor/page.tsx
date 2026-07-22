@@ -1,17 +1,22 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import DashboardLayout from '@/components/DashboardLayout'
-import { BookOpen, Users, Star, TrendingUp, Edit, Trash2, DollarSign, CheckCircle, RefreshCw } from 'lucide-react'
-import AnnouncementsBanner from '@/components/AnnouncementsBanner'
+import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import { StatCard } from '@/components/dashboard/StatCard'
+import { QuickActions } from '@/components/dashboard/QuickActions'
+import { DataTable } from '@/components/dashboard/DataTable'
+import { ChartPanel } from '@/components/dashboard/ChartPanel'
+import { FilterBar } from '@/components/dashboard/FilterBar'
+import { EmptyState, ErrorState } from '@/components/dashboard/EmptyState'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/dashboard/Toast'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
-import { DashboardSkeleton } from '@/components/DashboardSkeleton'
-import Link from 'next/link'
+import { RefreshCw, BookOpen, Users, Star, DollarSign, TrendingUp, Edit, Trash2, Eye, Plus, CheckCircle, XCircle } from 'lucide-react'
 import { courses } from '@/data/courses'
+import Link from 'next/link'
+import type { Course } from '@/types'
 
 interface InstructorStats {
   totalCourses: number
@@ -23,208 +28,301 @@ interface InstructorStats {
   completionRate: number
 }
 
-function InstructorDashboard() {
-  const { user } = useAuth()
-  const [stats, setStats] = useState<InstructorStats | null>(null)
-  const [initialLoading, setInitialLoading] = useState(true)
+const statusStyles: Record<string, string> = {
+  published: 'bg-green-100 text-green-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  rejected: 'bg-red-100 text-red-800',
+  draft: 'bg-gray-100 text-gray-800',
+  archived: 'bg-gray-100 text-gray-800',
+}
 
-  const fetchStats = useCallback(async () => {
+const quickActions = [
+  {
+    label: 'Create Course',
+    href: '/dashboard/instructor/create',
+    icon: <Plus className="h-4 w-4" />,
+    description: 'Start building a new course',
+    variant: 'default' as const,
+  },
+  {
+    label: 'Manage Courses',
+    href: '/dashboard/instructor/courses',
+    icon: <BookOpen className="h-4 w-4" />,
+    description: 'Edit and update content',
+    variant: 'outline' as const,
+  },
+  {
+    label: 'My Students',
+    href: '/dashboard/instructor/students',
+    icon: <Users className="h-4 w-4" />,
+    description: 'Track engagement',
+    variant: 'outline' as const,
+  },
+  {
+    label: 'Earnings',
+    href: '/dashboard/instructor/earnings',
+    icon: <DollarSign className="h-4 w-4" />,
+    description: 'View payouts',
+    variant: 'outline' as const,
+  },
+]
+
+export default function InstructorDashboard() {
+  const { user } = useAuth()
+  const { addToast } = useToast()
+  const [stats, setStats] = useState<InstructorStats | null>(null)
+  const [myCourses, setMyCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const fetchData = useCallback(async () => {
+    if (!user?.id) return
     try {
-      const response = await fetch(`/api/analytics/dashboard?role=instructor&userId=${user?.id}`)
-      const result = await response.json()
+      setError(null)
+      const res = await fetch(`/api/analytics/dashboard?role=instructor&userId=${user.id}`)
+      if (!res.ok) throw new Error('Failed to fetch stats')
+      const result = await res.json()
       if (result.success) {
         setStats(result.data)
+        const instructorCourses = courses.filter(c => c.instructor === user.name || c.instructorId === user.id)
+        setMyCourses(instructorCourses.length > 0 ? instructorCourses : courses.slice(0, 3))
       }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load dashboard'
+      setError(message)
+      addToast('error', message)
     } finally {
-      setInitialLoading(false)
+      setLoading(false)
     }
-  }, [user?.id])
+  }, [user?.id, addToast])
 
-  useRealTimeSync(fetchStats, 30000)
+  useRealTimeSync(fetchData, 60000)
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount)
+  const handleApproveCourse = async (courseId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      await fetch(`/api/courses/${courseId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'published' }),
+      })
+      addToast('success', 'Course published successfully')
+      fetchData()
+    } catch {
+      addToast('error', 'Failed to publish course')
+    }
   }
 
-  const myCourses = courses.filter(c => c.instructor === user?.name || c.instructorId === user?.id)
-  const allCourses = myCourses.length > 0 ? myCourses : courses.slice(0, 3)
-
-  const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'published':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Published</span>
-      case 'pending':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending Approval</span>
-      case 'rejected':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Rejected</span>
-      case 'draft':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Draft</span>
-      default:
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Published</span>
+  const handleRejectCourse = async (courseId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      await fetch(`/api/courses/${courseId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected' }),
+      })
+      addToast('success', 'Course rejected')
+      fetchData()
+    } catch {
+      addToast('error', 'Failed to reject course')
     }
+  }
+
+  const filteredCourses = myCourses.filter((c) =>
+    c.title.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const columns = [
+    {
+      key: 'title',
+      header: 'Course Title',
+      sortable: true,
+      render: (item: Course) => (
+        <div>
+          <p className="font-medium text-gray-900">{item.title}</p>
+          <p className="text-xs text-gray-500">{item.category} • {item.level}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'students',
+      header: 'Students',
+      render: (item: Course) => item.students.toLocaleString(),
+    },
+    {
+      key: 'rating',
+      header: 'Rating',
+      render: (item: Course) => (
+        <div className="flex items-center gap-1">
+          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+          <span>{item.rating}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (item: Course) => (
+        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusStyles[item.status] || statusStyles.draft}`}>
+          {item.status?.charAt(0).toUpperCase()}{item.status?.slice(1)}
+        </span>
+      ),
+    },
+  ]
+
+  if (loading) {
+    return (
+      <DashboardShell>
+        <div className="space-y-2">
+          <div className="animate-pulse h-8 w-48 bg-gray-200 rounded" />
+          <div className="animate-pulse h-4 w-64 bg-gray-200 rounded" />
+        </div>
+      </DashboardShell>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardShell>
+        <ErrorState
+          title="Dashboard unavailable"
+          message={error}
+          onRetry={fetchData}
+          retryLabel="Reload dashboard"
+        />
+      </DashboardShell>
+    )
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-6">
-        {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Instructor Dashboard</h1>
-            <p className="text-gray-600">Welcome, {user?.name}! Manage your courses and students.</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={fetchStats} disabled={initialLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${initialLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+    <DashboardShell>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Instructor Dashboard</h1>
+          <p className="text-gray-600 mt-1">Welcome, {user?.name}! Manage your courses and students.</p>
         </div>
 
-        {/* Announcements */}
-        <div className="mb-8">
-          <AnnouncementsBanner />
+        {/* Stats */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Revenue"
+            value={`KES ${(stats?.totalRevenue || 0).toLocaleString()}`}
+            subtitle={`KES ${(stats?.monthlyRevenue || 0).toLocaleString()} this month`}
+            icon={<DollarSign className="h-6 w-6" />}
+            href="/dashboard/instructor/earnings"
+            trend={{ value: 15, label: 'vs last month', direction: 'up' }}
+          />
+          <StatCard
+            title="Total Students"
+            value={stats?.totalStudents || 0}
+            subtitle={`${stats?.activeCourses || 0} active courses`}
+            icon={<Users className="h-6 w-6" />}
+            href="/dashboard/instructor/students"
+            trend={{ value: 10, label: 'new this month', direction: 'up' }}
+          />
+          <StatCard
+            title="Average Rating"
+            value={`${stats?.averageRating || 0}/5`}
+            subtitle={`${stats?.completionRate || 0}% completion`}
+            icon={<Star className="h-6 w-6" />}
+            href="/dashboard/instructor/analytics"
+          />
+          <StatCard
+            title="Active Courses"
+            value={stats?.activeCourses || 0}
+            subtitle={`of ${stats?.totalCourses || 0} total`}
+            icon={<CheckCircle className="h-6 w-6" />}
+            href="/dashboard/instructor/courses"
+          />
         </div>
 
-        {initialLoading ? (
-          <DashboardSkeleton />
-        ) : (
-          <>
-            {/* Stats Cards */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Link href="/dashboard/instructor/analytics">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-                        <p className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</p>
-                        <p className="text-xs text-green-600 mt-1">+{formatCurrency(stats?.monthlyRevenue || 0)} this month</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <DollarSign className="h-6 w-6 text-blue-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+        <QuickActions actions={quickActions} columns={4} />
 
-              <Link href="/dashboard/instructor/students">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Total Students</p>
-                        <p className="text-2xl font-bold">{stats?.totalStudents || 0}</p>
-                        <p className="text-xs text-gray-500 mt-1">Across {stats?.activeCourses || 0} courses</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-purple-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+        {/* Revenue Chart */}
+        <ChartPanel
+          title="Revenue Overview"
+          subtitle="Track your earnings over time"
+          type="line"
+          data={[
+            { name: 'Jan', value: 12000 },
+            { name: 'Feb', value: 19000 },
+            { name: 'Mar', value: 15000 },
+            { name: 'Apr', value: 22000 },
+            { name: 'May', value: 28000 },
+            { name: 'Jun', value: 35000 },
+          ]}
+          xAxisKey="name"
+          dataKey="value"
+          height={250}
+          colors={['#2563eb']}
+        />
 
-              <Link href="/dashboard/instructor/courses">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Average Rating</p>
-                        <p className="text-2xl font-bold">{stats?.averageRating || 0}/5</p>
-                        <p className="text-xs text-gray-500 mt-1">{stats?.completionRate || 0}% completion rate</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-yellow-100 flex items-center justify-center">
-                        <Star className="h-6 w-6 text-yellow-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* Course Management */}
+        <FilterBar
+          title="My Courses"
+          searchPlaceholder="Search courses..."
+          onSearch={setSearchQuery}
+          actions={
+            <Button asChild size="sm">
+              <Link href="/dashboard/instructor/create">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Course
               </Link>
-
-              <Link href="/dashboard/instructor/courses">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Active Courses</p>
-                        <p className="text-2xl font-bold">{stats?.activeCourses || 0}</p>
-                        <p className="text-xs text-gray-500 mt-1">of {stats?.totalCourses || 0} total</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                        <CheckCircle className="h-6 w-6 text-green-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+            </Button>
+          }
+        />
+        <DataTable
+          data={filteredCourses}
+          columns={columns}
+          keyExtractor={(item) => item.id}
+          onRowClick={(item) => {
+            window.location.href = `/dashboard/instructor/courses?course=${item.id}`
+          }}
+          loading={loading}
+          emptyState={
+            <EmptyState
+              icon={<BookOpen className="h-8 w-8" />}
+              title="No courses yet"
+              description="Create your first course to get started."
+              action={{ label: 'Create Course', href: '/dashboard/instructor/create' }}
+            />
+          }
+          actions={(item) => (
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" asChild>
+                <Link href={`/dashboard/instructor/courses?course=${item.id}`}>
+                  <Eye className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button size="sm" variant="ghost" asChild>
+                <Link href={`/dashboard/instructor/edit/${item.id}`}>
+                  <Edit className="h-4 w-4" />
+                </Link>
+              </Button>
+              {(item.status === 'pending' || item.status === 'draft') && (
+                <>
+                  <Button size="sm" variant="ghost" onClick={() => handleApproveCourse(item.id)}>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleRejectCourse(item.id)}>
+                    <XCircle className="h-4 w-4 text-red-600" />
+                  </Button>
+                </>
+              )}
             </div>
-
-            {/* My Courses */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">My Courses</h2>
-                  <Link href="/dashboard/instructor/create">
-                    <Button size="sm">
-                      <TrendingUp className="mr-2 h-4 w-4" /> Create Course
-                    </Button>
-                  </Link>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-semibold">Course Title</th>
-                        <th className="text-left py-3 px-4 font-semibold">Students</th>
-                        <th className="text-left py-3 px-4 font-semibold">Rating</th>
-                        <th className="text-left py-3 px-4 font-semibold">Status</th>
-                        <th className="text-left py-3 px-4 font-semibold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allCourses.map((course) => (
-                        <tr key={course.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4 font-medium">{course.title}</td>
-                          <td className="py-3 px-4 text-gray-600">{course.students.toLocaleString()}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                              <span>{course.rating}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            {getStatusBadge(course.status)}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="outline">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
+          )}
+        />
       </div>
-    </DashboardLayout>
+    </DashboardShell>
   )
 }
 
-export default function InstructorPage() {
+export function InstructorPage() {
   return (
     <ProtectedRoute permissions={['create_courses', 'view_students', 'edit_own_courses']}>
       <InstructorDashboard />
     </ProtectedRoute>
   )
 }
+

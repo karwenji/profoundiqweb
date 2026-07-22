@@ -1,18 +1,32 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import DashboardLayout from '@/components/DashboardLayout'
-import { getAllUsers, updateUserRole, deactivateUser, activateUser, getPendingInstructors, approveInstructor, rejectInstructor } from '@/lib/users'
-import type { UserRole } from '@/types'
-import { getPendingCourses, approveCourse, rejectCourse } from '@/lib/courses'
-import { Users, UserPlus, CheckCircle, XCircle, BookOpen, TrendingUp, DollarSign, Activity, Clock, RefreshCw, ClipboardCheck } from 'lucide-react'
-import AnnouncementsBanner from '@/components/AnnouncementsBanner'
+import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import { StatCard } from '@/components/dashboard/StatCard'
+import { QuickActions } from '@/components/dashboard/QuickActions'
+import { DataTable } from '@/components/dashboard/DataTable'
+import { ChartPanel } from '@/components/dashboard/ChartPanel'
+import { FilterBar } from '@/components/dashboard/FilterBar'
+import { WorkflowQueue } from '@/components/dashboard/WorkflowQueue'
+import { ApprovalCard } from '@/components/dashboard/ApprovalCard'
+import { EmptyState, ErrorState } from '@/components/dashboard/EmptyState'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/dashboard/Toast'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
-import { DashboardSkeleton } from '@/components/DashboardSkeleton'
+import { RefreshCw, Users, BookOpen, DollarSign, Activity, UserPlus, Shield, Settings, ClipboardCheck, CheckCircle, XCircle } from 'lucide-react'
+import {
+  getAllUsers,
+  updateUserRole,
+  deactivateUser,
+  activateUser,
+  getPendingInstructors,
+  approveInstructor,
+  rejectInstructor,
+} from '@/lib/users'
+import { getPendingCourses, approveCourse, rejectCourse } from '@/lib/courses'
+import type { UserRole } from '@/types'
 import Link from 'next/link'
 
 interface SuperAdminStats {
@@ -31,30 +45,58 @@ interface SuperAdminStats {
   pendingApprovals: number
 }
 
-function SuperAdminDashboard() {
+interface ApprovalItem {
+  id: string
+  title: string
+  description?: string
+  submittedBy: string
+  submittedAt: string
+  category?: string
+  level?: string
+  status?: 'pending' | 'approved' | 'rejected'
+}
+
+const quickActions = [
+  {
+    label: 'User Management',
+    href: '/dashboard/super-admin/users',
+    icon: <Users className="h-4 w-4" />,
+    description: 'Manage roles and access',
+    variant: 'default' as const,
+  },
+  {
+    label: 'Role Permissions',
+    href: '/dashboard/super-admin/roles',
+    icon: <Shield className="h-4 w-4" />,
+    description: 'Configure access control',
+    variant: 'outline' as const,
+  },
+  {
+    label: 'System Settings',
+    href: '/dashboard/super-admin/settings',
+    icon: <Settings className="h-4 w-4" />,
+    description: 'Platform configuration',
+    variant: 'outline' as const,
+  },
+  {
+    label: 'Audit Logs',
+    href: '/dashboard/super-admin/logs',
+    icon: <ClipboardCheck className="h-4 w-4" />,
+    description: 'Review system activity',
+    variant: 'outline' as const,
+  },
+]
+
+export default function SuperAdminDashboard() {
   const { user } = useAuth()
+  const { addToast } = useToast()
   const [usersState, setUsers] = useState(getAllUsers())
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all')
   const [stats, setStats] = useState<SuperAdminStats | null>(null)
-  const [initialLoading, setInitialLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [pendingInstructors, setPendingInstructors] = useState(getPendingInstructors())
   const [pendingCourses, setPendingCourses] = useState(getPendingCourses())
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const response = await fetch('/api/analytics/dashboard?role=super_admin')
-      const result = await response.json()
-      if (result.success) {
-        setStats(result.data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
-    } finally {
-      setInitialLoading(false)
-    }
-  }, [])
-
-  useRealTimeSync(fetchStats, 30000)
 
   const refreshWorkflows = useCallback(() => {
     setPendingInstructors(getPendingInstructors())
@@ -62,35 +104,59 @@ function SuperAdminDashboard() {
     setUsers(getAllUsers())
   }, [])
 
-  useEffect(() => {
-    refreshWorkflows()
-  }, [refreshWorkflows])
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null)
+      const res = await fetch('/api/analytics/dashboard?role=super_admin')
+      if (!res.ok) throw new Error('Failed to fetch stats')
+      const result = await res.json()
+      if (result.success) setStats(result.data)
+      refreshWorkflows()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load dashboard'
+      setError(message)
+      addToast('error', message)
+    } finally {
+      setLoading(false)
+    }
+  }, [addToast, refreshWorkflows])
+
+  useRealTimeSync(fetchData, 60000)
 
   const handleApproveInstructor = (userId: string) => {
     approveInstructor(userId)
+    addToast('success', 'Instructor approved')
     refreshWorkflows()
+    fetchData()
   }
 
   const handleRejectInstructor = (userId: string) => {
     rejectInstructor(userId)
+    addToast('success', 'Instructor registration rejected')
     refreshWorkflows()
+    fetchData()
   }
 
   const handleApproveCourse = (courseId: string) => {
     approveCourse(courseId)
+    addToast('success', 'Course approved')
     refreshWorkflows()
+    fetchData()
   }
 
   const handleRejectCourse = (courseId: string) => {
     rejectCourse(courseId)
+    addToast('success', 'Course rejected')
     refreshWorkflows()
+    fetchData()
   }
 
-  const filteredUsers = selectedRole === 'all' ? usersState : usersState.filter(u => u.role === selectedRole)
+  const filteredUsers = selectedRole === 'all' ? usersState : usersState.filter((u) => u.role === selectedRole)
 
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     updateUserRole(userId, newRole)
     setUsers(getAllUsers())
+    addToast('success', `User role updated to ${newRole.replace('_', ' ')}`)
     if (userId === user?.id) {
       setTimeout(() => window.location.reload(), 300)
     }
@@ -99,284 +165,259 @@ function SuperAdminDashboard() {
   const handleToggleActive = (userId: string, isActive: boolean) => {
     if (isActive) {
       deactivateUser(userId)
+      addToast('success', 'User deactivated')
     } else {
       activateUser(userId)
+      addToast('success', 'User activated')
     }
     setUsers(getAllUsers())
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount)
+  const allApprovalItems: ApprovalItem[] = [
+    ...pendingInstructors.map(({ user: pendingUser, daysWaiting }) => ({
+      id: pendingUser.id,
+      title: `Instructor Registration: ${pendingUser.name}`,
+      description: `Email: ${pendingUser.email} • Waiting ${daysWaiting} days`,
+      submittedBy: pendingUser.name,
+      submittedAt: pendingUser.createdAt,
+      status: 'pending' as const,
+    })),
+    ...pendingCourses.map((course) => ({
+      id: course.id,
+      title: `Course Submission: ${course.title}`,
+      description: `By ${course.instructor} • ${course.category} • ${course.level}`,
+      submittedBy: course.instructor,
+      submittedAt: new Date().toISOString(),
+      category: course.category,
+      level: course.level,
+      status: 'pending' as const,
+    })),
+  ]
+
+  const userColumns = [
+    {
+      key: 'name',
+      header: 'Name',
+      sortable: true,
+      render: (u: typeof usersState[0]) => (
+        <div>
+          <p className="font-medium text-gray-900">{u.name}</p>
+          <p className="text-xs text-gray-500">{u.uniqueId}</p>
+        </div>
+      ),
+    },
+    { key: 'email', header: 'Email' },
+    {
+      key: 'role',
+      header: 'Role',
+      render: (u: typeof usersState[0]) => (
+        <select
+          value={u.role}
+          onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
+          disabled={u.id === user?.id}
+          className="px-2 py-1 border rounded text-sm capitalize"
+        >
+          <option value="super_admin">Super Admin</option>
+          <option value="admin">Admin</option>
+          <option value="instructor">Instructor</option>
+          <option value="student">Student</option>
+        </select>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (u: typeof usersState[0]) => (
+        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {u.isActive ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (u: typeof usersState[0]) => (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => handleToggleActive(u.id, u.isActive)}
+          disabled={u.id === user?.id}
+        >
+          {u.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+        </Button>
+      ),
+    },
+  ]
+
+  if (loading) {
+    return (
+      <DashboardShell>
+        <div className="space-y-2">
+          <div className="animate-pulse h-8 w-48 bg-gray-200 rounded" />
+          <div className="animate-pulse h-4 w-64 bg-gray-200 rounded" />
+        </div>
+      </DashboardShell>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardShell>
+        <ErrorState
+          title="Dashboard unavailable"
+          message={error}
+          onRetry={fetchData}
+          retryLabel="Reload dashboard"
+        />
+      </DashboardShell>
+    )
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-6">
-        {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Super Admin Dashboard</h1>
-            <p className="text-gray-600">Welcome, {user?.name}! Full system control and user management.</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={fetchStats} disabled={initialLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${initialLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+    <DashboardShell>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
+          <p className="text-gray-600 mt-1">Welcome, {user?.name}! Full system control and monitoring.</p>
         </div>
 
-        {/* Announcements */}
-        <div className="mb-8">
-          <AnnouncementsBanner />
-        </div>
-
-        {initialLoading ? (
-          <DashboardSkeleton />
-        ) : (
-          <>
-            {/* Approval Queue - Top Priority */}
-            {(pendingInstructors.length > 0 || pendingCourses.length > 0) && (
-              <div className="mb-8 space-y-4">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <ClipboardCheck className="h-5 w-5 text-orange-600" />
-                  Approval Queue
-                  <span className="text-sm bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full">
-                    {pendingInstructors.length + pendingCourses.length}
-                  </span>
-                </h2>
-                
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Pending Instructors */}
-                  {pendingInstructors.length > 0 && (
-                    <Card>
-                      <CardContent className="pt-6">
-                        <h3 className="font-bold text-lg mb-4">Instructor Registrations</h3>
-                        <div className="space-y-4">
-                          {pendingInstructors.map(({ user: pendingUser, daysWaiting }) => (
-                            <div key={pendingUser.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div>
-                                <p className="font-semibold">{pendingUser.name}</p>
-                                <p className="text-sm text-gray-600">{pendingUser.email}</p>
-                                <p className="text-xs text-gray-500">Waiting {daysWaiting} days</p>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleApproveInstructor(pendingUser.id)}>
-                                  <CheckCircle className="h-4 w-4 mr-1" /> Approve
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleRejectInstructor(pendingUser.id)}>
-                                  <XCircle className="h-4 w-4 mr-1" /> Reject
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Pending Courses */}
-                  {pendingCourses.length > 0 && (
-                    <Card>
-                      <CardContent className="pt-6">
-                        <h3 className="font-bold text-lg mb-4">Course Approvals</h3>
-                        <div className="space-y-4">
-                          {pendingCourses.map((course) => (
-                            <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div>
-                                <p className="font-semibold">{course.title}</p>
-                                <p className="text-sm text-gray-600">by {course.instructor}</p>
-                                <p className="text-xs text-gray-500">{course.category} • {course.level}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleApproveCourse(course.id)}>
-                                  <CheckCircle className="h-4 w-4 mr-1" /> Approve
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleRejectCourse(course.id)}>
-                                  <XCircle className="h-4 w-4 mr-1" /> Reject
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Stats Cards */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              <Link href="/dashboard/super-admin/users">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Total Users</p>
-                        <p className="text-2xl font-bold">{usersState.length}</p>
-                        <p className="text-xs text-gray-500 mt-1">{pendingInstructors.length} pending approvals</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-primary" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link href="/dashboard/admin/courses">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Active Courses</p>
-                        <p className="text-2xl font-bold">{stats?.activeCourses || 0}</p>
-                        <p className="text-xs text-gray-500 mt-1">{pendingCourses.length} pending review</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                        <BookOpen className="h-6 w-6 text-green-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link href="/dashboard/super-admin/analytics">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">System Revenue</p>
-                        <p className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</p>
-                        <p className="text-xs text-green-600 mt-1">+{formatCurrency(stats?.monthlyRevenue || 0)} this month</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <DollarSign className="h-6 w-6 text-blue-600" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
-
-            {/* Workflow Actions */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <Link href="/dashboard/super-admin/users">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <h3 className="font-bold text-lg mb-2">User Management</h3>
-                    <p className="text-sm text-gray-600 mb-4">Manage roles, permissions, and user access across the platform.</p>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-gray-600">{usersState.filter(u => u.role === 'instructor').length} instructors</span>
-                      <span className="text-gray-400">•</span>
-                      <span className="text-gray-600">{usersState.filter(u => u.role === 'student').length} students</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link href="/dashboard/super-admin/roles">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <h3 className="font-bold text-lg mb-2">Role & Permissions</h3>
-                    <p className="text-sm text-gray-600 mb-4">Configure role-based access control and permission policies.</p>
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-green-600 font-medium">System Active</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
-
-            {/* User Management */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold">User Management</h2>
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedRole}
-                      onChange={(e) => setSelectedRole(e.target.value as UserRole | 'all')}
-                      className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="all">All Roles</option>
-                      <option value="super_admin">Super Admins</option>
-                      <option value="admin">Admins</option>
-                      <option value="instructor">Instructors</option>
-                      <option value="student">Students</option>
-                    </select>
-                    <Button>
-                      <UserPlus className="mr-2 h-4 w-4" /> Add User
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-semibold">Name</th>
-                        <th className="text-left py-3 px-4 font-semibold">Email</th>
-                        <th className="text-left py-3 px-4 font-semibold">Role</th>
-                        <th className="text-left py-3 px-4 font-semibold">Status</th>
-                        <th className="text-left py-3 px-4 font-semibold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.map((u) => (
-                        <tr key={u.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4 font-medium">{u.name}</td>
-                          <td className="py-3 px-4 text-gray-600">{u.email}</td>
-                          <td className="py-3 px-4">
-                            <select
-                              value={u.role}
-                              onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
-                              className="px-2 py-1 border rounded text-sm"
-                              disabled={u.id === user?.id}
-                            >
-                              <option value="super_admin">Super Admin</option>
-                              <option value="admin">Admin</option>
-                              <option value="instructor">Instructor</option>
-                              <option value="student">Student</option>
-                            </select>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {u.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleToggleActive(u.id, u.isActive)}
-                                disabled={u.id === user?.id}
-                              >
-                                {u.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </>
+        {/* Approval Queue */}
+        {allApprovalItems.length > 0 && (
+          <WorkflowQueue
+            title="Approval Queue"
+            items={allApprovalItems.map((item) => ({
+              id: item.id,
+              type: 'approval' as const,
+              title: item.title,
+              description: item.description,
+              timestamp: item.submittedAt,
+              actions: item.submittedBy.includes('Instructor') || item.submittedBy.includes('User')
+                ? [
+                    {
+                      label: 'Approve',
+                      onClick: () => handleApproveInstructor(item.id),
+                      variant: 'default' as const,
+                    },
+                    {
+                      label: 'Reject',
+                      onClick: () => handleRejectInstructor(item.id),
+                      variant: 'outline' as const,
+                    },
+                  ]
+                : [
+                    {
+                      label: 'Review',
+                      onClick: () => window.location.href = `/dashboard/admin/courses?course=${item.id}`,
+                      variant: 'outline' as const,
+                    },
+                    {
+                      label: 'Approve',
+                      onClick: () => handleApproveCourse(item.id),
+                      variant: 'default' as const,
+                    },
+                    {
+                      label: 'Reject',
+                      onClick: () => handleRejectCourse(item.id),
+                      variant: 'outline' as const,
+                    },
+                  ],
+            }))}
+            emptyTitle="All caught up"
+            emptyDescription="No pending approvals."
+            maxItems={5}
+          />
         )}
+
+        {/* Stats */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Users"
+            value={stats?.totalUsers || usersState.length}
+            subtitle={`${pendingInstructors.length} pending approvals`}
+            icon={<Users className="h-6 w-6" />}
+            href="/dashboard/super-admin/users"
+            trend={{ value: 8, label: 'new this month', direction: 'up' }}
+          />
+          <StatCard
+            title="Active Courses"
+            value={stats?.activeCourses || 0}
+            subtitle={`${pendingCourses.length} pending review`}
+            icon={<BookOpen className="h-6 w-6" />}
+            href="/dashboard/admin/courses"
+          />
+          <StatCard
+            title="System Revenue"
+            value={`KES ${(stats?.totalRevenue || 0).toLocaleString()}`}
+            subtitle={`KES ${(stats?.monthlyRevenue || 0).toLocaleString()} this month`}
+            icon={<DollarSign className="h-6 w-6" />}
+            href="/dashboard/super-admin/analytics"
+            trend={{ value: 22, label: 'vs last month', direction: 'up' }}
+          />
+          <StatCard
+            title="System Uptime"
+            value={`${stats?.systemUptime || 99.9}%`}
+            subtitle="Last 30 days"
+            icon={<Activity className="h-6 w-6" />}
+            href="/dashboard/super-admin/logs"
+          />
+        </div>
+
+        <QuickActions actions={quickActions} columns={4} />
+
+        {/* Revenue Trend */}
+        <ChartPanel
+          title="Platform Revenue"
+          subtitle="Monthly revenue across all courses"
+          type="line"
+          data={[
+            { name: 'Jan', value: 450000 },
+            { name: 'Feb', value: 520000 },
+            { name: 'Mar', value: 480000 },
+            { name: 'Apr', value: 610000 },
+            { name: 'May', value: 580000 },
+            { name: 'Jun', value: 720000 },
+          ]}
+          xAxisKey="name"
+          dataKey="value"
+          height={250}
+          colors={['#2563eb']}
+        />
+
+        {/* User Management */}
+        <FilterBar
+          title="User Management"
+          searchPlaceholder="Search users..."
+          onSearch={() => {}}
+          actions={
+            <Button size="sm">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add User
+            </Button>
+          }
+        />
+        <DataTable
+          data={filteredUsers}
+          columns={userColumns}
+          keyExtractor={(u) => u.id}
+          loading={loading}
+          emptyState={
+            <EmptyState
+              icon={<Users className="h-8 w-8" />}
+              title="No users yet"
+              description="Users will appear here once they register."
+            />
+          }
+        />
       </div>
-    </DashboardLayout>
+    </DashboardShell>
   )
 }
 
-export default function SuperAdminPage() {
+export function SuperAdminPage() {
   return (
     <ProtectedRoute permission="view_analytics">
       <SuperAdminDashboard />
     </ProtectedRoute>
   )
 }
+

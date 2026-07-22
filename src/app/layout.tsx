@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import FloatingRegisterButton from '@/components/FloatingRegisterButton'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { SettingsProvider } from '@/contexts/SettingsContext'
+import { ToastProvider } from '@/components/dashboard/Toast'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,10 +30,12 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <SettingsProvider>
-            <Header />
-            <main className="min-h-screen">{children}</main>
-            <Footer />
-            <FloatingRegisterButton />
+            <ToastProvider>
+              <Header />
+              <main className="min-h-screen">{children}</main>
+              <Footer />
+              <FloatingRegisterButton />
+            </ToastProvider>
           </SettingsProvider>
         </AuthProvider>
       </body>

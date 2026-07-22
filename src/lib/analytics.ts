@@ -46,6 +46,9 @@ export interface StudentStats {
   certificatesEarned: number
   totalSpent: number
   learningHours: number
+  streakDays: number
+  weeklyGoal: number
+  weeklyProgress: number
 }
 
 // Helper to get effective price for a course (uses NGN as base currency for analytics)
@@ -211,6 +214,9 @@ function calculateStudentStats(studentId?: string): StudentStats {
     certificatesEarned: completedCourses,
     totalSpent,
     learningHours,
+    streakDays: Math.min(21, Math.max(1, Math.floor(learningHours / 3))),
+    weeklyGoal: 10,
+    weeklyProgress: Math.min(100, Math.max(0, Math.round((learningHours / 40) * 100))),
   }
 }
 
