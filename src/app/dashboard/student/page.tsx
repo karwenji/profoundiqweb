@@ -70,7 +70,7 @@ function StudentDashboard() {
           <DashboardSkeleton />
         ) : (
           <>
-            {/* Stats Cards */}
+            {/* Learning Progress - Primary Workflow */}
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Link href="/dashboard/courses">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer">
@@ -141,32 +141,72 @@ function StudentDashboard() {
               </Link>
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="text-lg font-semibold mb-4">Continue Learning</h3>
-                  <p className="text-gray-600 mb-4">Pick up where you left off in your courses.</p>
-                  <Link href="/dashboard/courses">
+            {/* Learning Workflow Actions */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <Link href="/dashboard/courses">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <BookOpen className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">My Learning</h3>
+                        <p className="text-sm text-gray-600">{stats?.inProgressCourses || 0} courses in progress</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">Continue where you left off. Track your progress and complete lessons.</p>
                     <Button className="w-full">
                       <BookOpen className="mr-2 h-4 w-4" /> View My Courses
                     </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="text-lg font-semibold mb-4">Browse Courses</h3>
-                  <p className="text-gray-600 mb-4">Discover new courses to expand your knowledge.</p>
-                  <Link href="/courses">
+              <Link href="/courses">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Browse Catalog</h3>
+                        <p className="text-sm text-gray-600">Discover new courses</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">Explore new skills and advance your career with our curated courses.</p>
                     <Button variant="outline" className="w-full">
-                      <TrendingUp className="mr-2 h-4 w-4" /> Browse Catalog
+                      <TrendingUp className="mr-2 h-4 w-4" /> Browse Courses
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <Link href="/dashboard/certificates">
+                    <Button variant="outline" className="w-full">
+                      <Award className="mr-2 h-4 w-4" /> View Certificates
                     </Button>
                   </Link>
-                </CardContent>
-              </Card>
-            </div>
+                  <Link href="/dashboard/support">
+                    <Button variant="outline" className="w-full">
+                      <DollarSign className="mr-2 h-4 w-4" /> Get Support
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/student/analytics">
+                    <Button variant="outline" className="w-full">
+                      <TrendingUp className="mr-2 h-4 w-4" /> View Analytics
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
       </div>

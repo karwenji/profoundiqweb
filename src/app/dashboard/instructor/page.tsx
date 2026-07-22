@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { BookOpen, Users, Star, TrendingUp, Plus, Edit, Trash2, DollarSign, CheckCircle, RefreshCw } from 'lucide-react'
+import { BookOpen, Users, Star, TrendingUp, Edit, Trash2, DollarSign, CheckCircle, RefreshCw } from 'lucide-react'
 import AnnouncementsBanner from '@/components/AnnouncementsBanner'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import { DashboardSkeleton } from '@/components/DashboardSkeleton'
@@ -50,6 +50,21 @@ function InstructorDashboard() {
 
   const myCourses = courses.filter(c => c.instructor === user?.name || c.instructorId === user?.id)
   const allCourses = myCourses.length > 0 ? myCourses : courses.slice(0, 3)
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'published':
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Published</span>
+      case 'pending':
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending Approval</span>
+      case 'rejected':
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Rejected</span>
+      case 'draft':
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Draft</span>
+      default:
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Published</span>
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -149,7 +164,14 @@ function InstructorDashboard() {
             {/* My Courses */}
             <Card>
               <CardContent className="pt-6">
-                <h2 className="text-xl font-bold mb-4">My Courses</h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">My Courses</h2>
+                  <Link href="/dashboard/instructor/create">
+                    <Button size="sm">
+                      <TrendingUp className="mr-2 h-4 w-4" /> Create Course
+                    </Button>
+                  </Link>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -157,7 +179,7 @@ function InstructorDashboard() {
                         <th className="text-left py-3 px-4 font-semibold">Course Title</th>
                         <th className="text-left py-3 px-4 font-semibold">Students</th>
                         <th className="text-left py-3 px-4 font-semibold">Rating</th>
-                        <th className="text-left py-3 px-4 font-semibold">Lessons</th>
+                        <th className="text-left py-3 px-4 font-semibold">Status</th>
                         <th className="text-left py-3 px-4 font-semibold">Actions</th>
                       </tr>
                     </thead>
@@ -172,7 +194,9 @@ function InstructorDashboard() {
                               <span>{course.rating}</span>
                             </div>
                           </td>
-                          <td className="py-3 px-4">{course.lessons}</td>
+                          <td className="py-3 px-4">
+                            {getStatusBadge(course.status)}
+                          </td>
                           <td className="py-3 px-4">
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline">

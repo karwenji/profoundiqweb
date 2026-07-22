@@ -7,7 +7,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getAllUsers } from '@/lib/users'
-import { Users, BookOpen, TrendingUp, DollarSign, CheckCircle, Clock, RefreshCw } from 'lucide-react'
+import { getPendingCourses, approveCourse, rejectCourse } from '@/lib/courses'
+import { Users, BookOpen, TrendingUp, DollarSign, CheckCircle, Clock, RefreshCw, ClipboardCheck, XCircle } from 'lucide-react'
 import AnnouncementsBanner from '@/components/AnnouncementsBanner'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import { DashboardSkeleton } from '@/components/DashboardSkeleton'
@@ -34,6 +35,7 @@ function AdminDashboard() {
   const users = getAllUsers()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [pendingCourses, setPendingCourses] = useState(getPendingCourses())
 
   const fetchStats = useCallback(async () => {
     try {
@@ -50,6 +52,24 @@ function AdminDashboard() {
   }, [])
 
   useRealTimeSync(fetchStats, 30000)
+
+  const refreshWorkflows = useCallback(() => {
+    setPendingCourses(getPendingCourses())
+  }, [])
+
+  useEffect(() => {
+    refreshWorkflows()
+  }, [refreshWorkflows])
+
+  const handleApproveCourse = (courseId: string) => {
+    approveCourse(courseId)
+    refreshWorkflows()
+  }
+
+  const handleRejectCourse = (courseId: string) => {
+    rejectCourse(courseId)
+    refreshWorkflows()
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount)
@@ -81,6 +101,42 @@ function AdminDashboard() {
           <DashboardSkeleton />
         ) : (
           <>
+            {/* Course Approval Queue */}
+            {pendingCourses.length > 0 && (
+              <div className="mb-8">
+                <Card>
+                  <CardContent className="pt-6">
+                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                      <ClipboardCheck className="h-5 w-5 text-orange-600" />
+                      Pending Course Approvals
+                      <span className="text-sm bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full">
+                        {pendingCourses.length}
+                      </span>
+                    </h2>
+                    <div className="space-y-4">
+                      {pendingCourses.map((course) => (
+                        <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div>
+                            <p className="font-semibold">{course.title}</p>
+                            <p className="text-sm text-gray-600">by {course.instructor}</p>
+                            <p className="text-xs text-gray-500">{course.category} • {course.level} • {course.duration}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => handleApproveCourse(course.id)}>
+                              <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleRejectCourse(course.id)}>
+                              <XCircle className="h-4 w-4 mr-1" /> Reject
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {/* Stats Cards */}
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Link href="/dashboard/admin/analytics">

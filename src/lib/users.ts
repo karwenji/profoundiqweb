@@ -15,6 +15,7 @@ export interface User {
   phone?: string;
   bio?: string;
   avatar?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected'
 }
 
 export const users: User[] = [
@@ -24,12 +25,13 @@ export const users: User[] = [
     uniqueId: 'PIQ-SA-001',
     name: 'Stephen Mwihaki',
     email: 'superadmin@profoundiqconsulting.com',
-    password: 'admin123', // In production, use hashed password
+    password: 'admin123',
     role: 'super_admin',
     createdAt: new Date().toISOString(),
     isActive: true,
     phone: '+254 700 000 000',
     bio: 'Platform administrator and consultant.',
+    approvalStatus: 'approved',
   },
   // Default admin account
   {
@@ -43,6 +45,7 @@ export const users: User[] = [
     isActive: true,
     phone: '+254 711 000 000',
     bio: 'Operations manager overseeing daily platform activities.',
+    approvalStatus: 'approved',
   },
   // Default instructor account
   {
@@ -56,6 +59,7 @@ export const users: User[] = [
     isActive: true,
     phone: '+254 722 000 000',
     bio: 'Senior instructor with expertise in professional development and leadership training.',
+    approvalStatus: 'approved',
   },
   // Default student account
   {
@@ -69,6 +73,7 @@ export const users: User[] = [
     isActive: true,
     phone: '+254 733 000 000',
     bio: 'Passionate learner focused on professional development and career growth.',
+    approvalStatus: 'approved',
   },
 ];
 
@@ -140,11 +145,42 @@ export function activateUser(userId: string): boolean {
   return false;
 }
 
-export function updateUser(userId: string, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'bio' | 'avatar' | 'password'>>): User | undefined {
+export function updateUser(userId: string, updates: Partial<Pick<User, 'name' | 'email' | 'phone' | 'bio' | 'avatar' | 'password' | 'approvalStatus'>>): User | undefined {
   const user = users.find(u => u.id === userId);
   if (user) {
     Object.assign(user, updates);
     return { ...user };
   }
   return undefined;
+}
+
+export function getPendingInstructors(): { user: typeof users[0]; daysWaiting: number }[] {
+  return users
+    .filter(u => u.role === 'instructor' && u.approvalStatus === 'pending')
+    .map(u => ({
+      user: u,
+      daysWaiting: Math.max(1, Math.floor((Date.now() - new Date(u.createdAt).getTime()) / (1000 * 60 * 60 * 24))),
+    }));
+}
+
+export function approveInstructor(userId: string): boolean {
+  const user = users.find(u => u.id === userId)
+  if (user) {
+    user.approvalStatus = 'approved'
+    return true
+  }
+  return false
+}
+
+export function rejectInstructor(userId: string): boolean {
+  const user = users.find(u => u.id === userId)
+  if (user) {
+    user.approvalStatus = 'rejected'
+    return true
+  }
+  return false
+}
+
+export function getPendingStudentEnrollments(): { studentId: string; courseId: string; courseTitle: string }[] {
+  return []
 }

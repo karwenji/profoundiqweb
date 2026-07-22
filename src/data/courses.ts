@@ -29,6 +29,7 @@ export const courses: Course[] = [
       { id: 'l4', title: 'Conflict Resolution', duration: '50 min', isFree: false },
     ],
     features: ['Certificate of Completion', 'Lifetime Access', 'Downloadable Resources', 'Community Support'],
+    status: 'published',
   },
   {
     id: '2',
@@ -57,6 +58,7 @@ export const courses: Course[] = [
       { id: 'l3', title: 'Social Media Strategy', duration: '50 min', isFree: false },
     ],
     features: ['Certificate of Completion', 'Lifetime Access', 'Practical Projects', 'Expert Mentorship'],
+    status: 'published',
   },
   {
     id: '3',
@@ -78,6 +80,7 @@ export const courses: Course[] = [
       { id: 'l3', title: 'Risk Management', duration: '55 min', isFree: false },
     ],
     features: ['PMP Exam Prep', 'Certificate of Completion', 'Study Materials', 'Practice Tests'],
+    status: 'published',
   },
   {
     id: '4',
@@ -99,6 +102,7 @@ export const courses: Course[] = [
       { id: 'l3', title: 'Statistical Analysis', duration: '55 min', isFree: false },
     ],
     features: ['Hands-on Projects', 'Certificate of Completion', 'Tool Access', 'Career Support'],
+    status: 'published',
   },
   {
     id: '5',
@@ -120,6 +124,7 @@ export const courses: Course[] = [
       { id: 'l3', title: 'Presentation Skills', duration: '50 min', isFree: false },
     ],
     features: ['Interactive Exercises', 'Certificate of Completion', 'Video Feedback', 'Peer Review'],
+    status: 'published',
   },
   {
     id: '6',
@@ -141,6 +146,7 @@ export const courses: Course[] = [
       { id: 'l3', title: 'Retirement Planning', duration: '55 min', isFree: false },
     ],
     features: ['Financial Templates', 'Certificate of Completion', 'Expert Q&A', 'Resource Library'],
+    status: 'published',
   },
 ]
 

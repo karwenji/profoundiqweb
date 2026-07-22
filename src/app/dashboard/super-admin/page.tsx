@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { getAllUsers, updateUserRole, deactivateUser, activateUser, UserRole } from '@/lib/users'
-import { Users, UserPlus, CheckCircle, XCircle, BookOpen, TrendingUp, DollarSign, Activity, Clock, RefreshCw } from 'lucide-react'
+import { getAllUsers, updateUserRole, deactivateUser, activateUser, getPendingInstructors, approveInstructor, rejectInstructor, UserRole } from '@/lib/users'
+import { getPendingCourses, approveCourse, rejectCourse } from '@/lib/courses'
+import { Users, UserPlus, CheckCircle, XCircle, BookOpen, TrendingUp, DollarSign, Activity, Clock, RefreshCw, ClipboardCheck } from 'lucide-react'
 import AnnouncementsBanner from '@/components/AnnouncementsBanner'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import { DashboardSkeleton } from '@/components/DashboardSkeleton'
@@ -35,6 +36,8 @@ function SuperAdminDashboard() {
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all')
   const [stats, setStats] = useState<SuperAdminStats | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [pendingInstructors, setPendingInstructors] = useState(getPendingInstructors())
+  const [pendingCourses, setPendingCourses] = useState(getPendingCourses())
 
   const fetchStats = useCallback(async () => {
     try {
@@ -51,6 +54,36 @@ function SuperAdminDashboard() {
   }, [])
 
   useRealTimeSync(fetchStats, 30000)
+
+  const refreshWorkflows = useCallback(() => {
+    setPendingInstructors(getPendingInstructors())
+    setPendingCourses(getPendingCourses())
+    setUsers(getAllUsers())
+  }, [])
+
+  useEffect(() => {
+    refreshWorkflows()
+  }, [refreshWorkflows])
+
+  const handleApproveInstructor = (userId: string) => {
+    approveInstructor(userId)
+    refreshWorkflows()
+  }
+
+  const handleRejectInstructor = (userId: string) => {
+    rejectInstructor(userId)
+    refreshWorkflows()
+  }
+
+  const handleApproveCourse = (courseId: string) => {
+    approveCourse(courseId)
+    refreshWorkflows()
+  }
+
+  const handleRejectCourse = (courseId: string) => {
+    rejectCourse(courseId)
+    refreshWorkflows()
+  }
 
   const filteredUsers = selectedRole === 'all' ? usersState : usersState.filter(u => u.role === selectedRole)
 
@@ -99,16 +132,87 @@ function SuperAdminDashboard() {
           <DashboardSkeleton />
         ) : (
           <>
+            {/* Approval Queue - Top Priority */}
+            {(pendingInstructors.length > 0 || pendingCourses.length > 0) && (
+              <div className="mb-8 space-y-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-orange-600" />
+                  Approval Queue
+                  <span className="text-sm bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full">
+                    {pendingInstructors.length + pendingCourses.length}
+                  </span>
+                </h2>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Pending Instructors */}
+                  {pendingInstructors.length > 0 && (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <h3 className="font-bold text-lg mb-4">Instructor Registrations</h3>
+                        <div className="space-y-4">
+                          {pendingInstructors.map(({ user: pendingUser, daysWaiting }) => (
+                            <div key={pendingUser.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div>
+                                <p className="font-semibold">{pendingUser.name}</p>
+                                <p className="text-sm text-gray-600">{pendingUser.email}</p>
+                                <p className="text-xs text-gray-500">Waiting {daysWaiting} days</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => handleApproveInstructor(pendingUser.id)}>
+                                  <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleRejectInstructor(pendingUser.id)}>
+                                  <XCircle className="h-4 w-4 mr-1" /> Reject
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Pending Courses */}
+                  {pendingCourses.length > 0 && (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <h3 className="font-bold text-lg mb-4">Course Approvals</h3>
+                        <div className="space-y-4">
+                          {pendingCourses.map((course) => (
+                            <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div>
+                                <p className="font-semibold">{course.title}</p>
+                                <p className="text-sm text-gray-600">by {course.instructor}</p>
+                                <p className="text-xs text-gray-500">{course.category} • {course.level}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => handleApproveCourse(course.id)}>
+                                  <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleRejectCourse(course.id)}>
+                                  <XCircle className="h-4 w-4 mr-1" /> Reject
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Stats Cards */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               <Link href="/dashboard/super-admin/users">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-gray-600 mb-1">Total Users</p>
-                        <p className="text-2xl font-bold">{stats?.totalUsers || 0}</p>
-                        <p className="text-xs text-green-600 mt-1">+{stats?.newStudentsThisMonth || 0} this month</p>
+                        <p className="text-2xl font-bold">{usersState.length}</p>
+                        <p className="text-xs text-gray-500 mt-1">{pendingInstructors.length} pending approvals</p>
                       </div>
                       <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
                         <Users className="h-6 w-6 text-primary" />
@@ -118,17 +222,17 @@ function SuperAdminDashboard() {
                 </Card>
               </Link>
 
-              <Link href="/dashboard/super-admin/users">
+              <Link href="/dashboard/admin/courses">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">Active Users</p>
-                        <p className="text-2xl font-bold">{stats?.activeUsers || 0}</p>
-                        <p className="text-xs text-gray-500 mt-1">{stats?.totalUsers ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}% active</p>
+                        <p className="text-sm text-gray-600 mb-1">Active Courses</p>
+                        <p className="text-2xl font-bold">{stats?.activeCourses || 0}</p>
+                        <p className="text-xs text-gray-500 mt-1">{pendingCourses.length} pending review</p>
                       </div>
                       <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                        <Activity className="h-6 w-6 text-green-600" />
+                        <BookOpen className="h-6 w-6 text-green-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -140,7 +244,7 @@ function SuperAdminDashboard() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+                        <p className="text-sm text-gray-600 mb-1">System Revenue</p>
                         <p className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</p>
                         <p className="text-xs text-green-600 mt-1">+{formatCurrency(stats?.monthlyRevenue || 0)} this month</p>
                       </div>
@@ -151,19 +255,32 @@ function SuperAdminDashboard() {
                   </CardContent>
                 </Card>
               </Link>
+            </div>
 
-              <Link href="/dashboard/super-admin/settings">
+            {/* Workflow Actions */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <Link href="/dashboard/super-admin/users">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                   <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">System Uptime</p>
-                        <p className="text-2xl font-bold">{stats?.systemUptime || 0}%</p>
-                        <p className="text-xs text-gray-500 mt-1">{stats?.pendingApprovals || 0} pending approvals</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                        <Clock className="h-6 w-6 text-purple-600" />
-                      </div>
+                    <h3 className="font-bold text-lg mb-2">User Management</h3>
+                    <p className="text-sm text-gray-600 mb-4">Manage roles, permissions, and user access across the platform.</p>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-gray-600">{usersState.filter(u => u.role === 'instructor').length} instructors</span>
+                      <span className="text-gray-400">•</span>
+                      <span className="text-gray-600">{usersState.filter(u => u.role === 'student').length} students</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <Link href="/dashboard/super-admin/roles">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardContent className="pt-6">
+                    <h3 className="font-bold text-lg mb-2">Role & Permissions</h3>
+                    <p className="text-sm text-gray-600 mb-4">Configure role-based access control and permission policies.</p>
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-600 font-medium">System Active</span>
                     </div>
                   </CardContent>
                 </Card>

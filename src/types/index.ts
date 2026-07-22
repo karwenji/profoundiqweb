@@ -8,15 +8,18 @@ export interface CoursePricing {
   GBP?: number;
 }
 
+export type CourseStatus = 'draft' | 'pending' | 'published' | 'archived' | 'rejected'
+export type UserApprovalStatus = 'pending' | 'approved' | 'rejected'
+
 export interface Course {
   id: string;
   title: string;
   description: string;
   instructor: string;
   instructorId?: string;
-  price: number; // Default price (for backwards compatibility)
+  price: number;
   originalPrice?: number;
-  pricing?: CoursePricing; // Multi-currency pricing
+  pricing?: CoursePricing;
   image: string;
   category: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
@@ -26,7 +29,7 @@ export interface Course {
   lessons: number;
   curriculum: Lesson[];
   features: string[];
-  status?: 'draft' | 'published' | 'archived' | 'pending';
+  status: CourseStatus;
 }
 
 export interface Lesson {
@@ -46,6 +49,7 @@ export interface User {
   createdAt: string;
   phone?: string;
   bio?: string;
+  approvalStatus?: UserApprovalStatus
 }
 
 export interface CartItem {
