@@ -13,32 +13,81 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Trophy, Flame, Zap, Download, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import type { Badge } from '@/types/courseWorkflow'
-import { getAllBadges, getXPTransactionsForUser } from '@/lib/gamification/xp'
-import { getCertificatesForUser, getTotalXPForUser, getOrCreateStreakRecord } from '@/lib/courseWorkflow'
+import { apiClient } from '@/lib/api/client'
+import { useToast } from '@/components/dashboard/Toast'
+
+interface GamificationOverview {
+  totalXP: number
+  level: number
+  streak: { current_streak: number; longest_streak: number; streak_freezes: number }
+  badgesEarned: number
+}
+
+interface EarnedBadge {
+  id: string
+  badge_id: string
+  name: string
+  description: string
+  icon: string
+  tier: string
+  category: string
+  earned_at: string
+  course_id?: string
+}
+
+interface Certificate {
+  id: string
+  certificate_number: string
+  issued_at: string
+  course_title?: string
+  course_thumbnail?: string
+  download_url?: string
+  verification_url?: string
+}
 
 export default function AchievementsPage() {
   const { user } = useAuth()
+  const { addToast } = useToast()
   const [badges, setBadges] = useState<Badge[]>([])
-  const [certificates, setCertificates] = useState<any[]>([])
+  const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([])
+  const [certificates, setCertificates] = useState<Certificate[]>([])
+  const [overview, setOverview] = useState<GamificationOverview | null>(null)
   const [loading, setLoading] = useState(true)
-
-  const streakRecord = user?.id ? getOrCreateStreakRecord(user.id) : null
-  const streak = {
-    current: streakRecord?.currentStreak || 0,
-    longestStreak: streakRecord?.longestStreak || 0,
-    streakFreezes: streakRecord?.streakFreezes || 0,
-  }
-
-  const earnedBadgeIds = (user as any)?.badges || []
-  const totalXP = getTotalXPForUser(user?.id || '')
-  const level = Math.floor(Math.sqrt(totalXP / 100)) + 1
+  const [activeTab, setActiveTab] = useState('badges')
 
   useEffect(() => {
     if (!user?.id) return
-    setBadges(getAllBadges())
-    setCertificates(getCertificatesForUser(user.id))
-    setLoading(false)
-  }, [user?.id])
+    let cancelled = false
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [badgesRes, earnedRes, certRes, overviewRes] = await Promise.all([
+          apiClient.get<{ success: boolean; data: Badge[] }>('/api/gamification/badges'),
+          apiClient.get<{ success: boolean; data: EarnedBadge[] }>('/api/gamification/badges/earned'),
+          apiClient.get<{ success: boolean; data: Certificate[] }>('/api/gamification/certificates'),
+          apiClient.get<{ success: boolean; data: GamificationOverview }>('/api/gamification/overview'),
+        ])
+
+        if (!cancelled) {
+          setBadges(badgesRes.data || [])
+          setEarnedBadges(earnedRes.data || [])
+          setCertificates(certRes.data || [])
+          setOverview(overviewRes.data || null)
+        }
+      } catch (err) {
+        if (!cancelled) addToast('error', err instanceof Error ? err.message : 'Failed to load achievements')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchData()
+    return () => { cancelled = true }
+  }, [user?.id, addToast])
+
+  const totalXP = overview?.totalXP || 0
+  const level = overview?.level || 1
+  const streak = overview?.streak || { current_streak: 0, longest_streak: 0, streak_freezes: 0 }
+  const earnedBadgeIds = earnedBadges.map(b => b.badge_id)
 
   if (loading) {
     return (
@@ -81,10 +130,10 @@ export default function AchievementsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Current Streak</p>
-                  <p className="text-2xl font-bold">{streak.current || 0} days</p>
+                  <p className="text-2xl font-bold">{streak.current_streak || 0} days</p>
                 </div>
                 <div>
-                  <StreakCounter currentStreak={streak.current || 0} longestStreak={streak.longestStreak || 0} streakFreezes={streak.streakFreezes || 0} size="lg" />
+                  <StreakCounter currentStreak={streak.current_streak || 0} longestStreak={streak.longest_streak || 0} streakFreezes={streak.streak_freezes || 0} size="lg" />
                 </div>
               </div>
             </CardContent>
@@ -105,7 +154,7 @@ export default function AchievementsPage() {
           </Card>
         </div>
 
-        <Tabs defaultValue="badges" className="space-y-6">
+        <Tabs defaultValue="badges" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="badges">Badges</TabsTrigger>
             <TabsTrigger value="certificates">Certificates</TabsTrigger>
@@ -130,16 +179,25 @@ export default function AchievementsPage() {
                     {certificates.map(cert => (
                       <div key={cert.id} className="border rounded-lg p-4 flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-gray-900">Certificate #{cert.certificateNumber}</p>
-                          <p className="text-sm text-gray-500">Issued {new Date(cert.issuedAt).toLocaleDateString()}</p>
+                          <p className="font-medium text-gray-900">Certificate #{cert.certificate_number}</p>
+                          <p className="text-sm text-gray-500">Issued {new Date(cert.issued_at).toLocaleDateString()}</p>
+                          {cert.course_title && <p className="text-sm text-gray-600">{cert.course_title}</p>}
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
-                            <Download className="h-4 w-4 mr-1" /> Download
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            <Share2 className="h-4 w-4" />
-                          </Button>
+                          {cert.download_url && (
+                            <Button size="sm" variant="outline" asChild>
+                              <a href={cert.download_url} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4 mr-1" /> Download
+                              </a>
+                            </Button>
+                          )}
+                          {cert.verification_url && (
+                            <Button size="sm" variant="ghost" asChild>
+                              <a href={cert.verification_url} target="_blank" rel="noopener noreferrer">
+                                <Share2 className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}

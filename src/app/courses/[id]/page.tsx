@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { courses } from '@/data/courses'
+import { apiClient } from '@/lib/api/client'
 import { getModulesWithLessons } from '@/lib/courseWorkflow'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,17 +13,61 @@ import { Star, Clock, Users, BookOpen, CheckCircle, PlayCircle, ArrowLeft, Zap, 
 import { formatPrice } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/dashboard/Toast'
 
 export default function CourseDetailPage() {
   const params = useParams()
   const courseId = params.id as string
-  const course = courses.find(c => c.id === courseId)
   const { addItem } = useCart()
+  const { addToast } = useToast()
+  const [course, setCourse] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const [showFullCurriculum, setShowFullCurriculum] = useState(false)
 
   const modulesWithLessons = course ? getModulesWithLessons(course.id) : []
   const totalXP = modulesWithLessons.reduce((sum, m) => sum + m.lessons.reduce((s, l) => s + l.xpReward, 0), 0)
   const totalLessons = modulesWithLessons.reduce((sum, m) => sum + m.lessons.length, 0)
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchCourse = async () => {
+      try {
+        setLoading(true)
+        const result = await apiClient.get<{ success: boolean; data: any }>(`/api/courses/${courseId}`)
+        if (!cancelled) setCourse(result.data || null)
+      } catch {
+        if (!cancelled) addToast('error', 'Failed to load course')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchCourse()
+    return () => { cancelled = true }
+  }, [courseId, addToast])
+
+  const handleAddToCart = () => {
+    if (!course) return
+    addItem({
+      courseId: course.id,
+      title: course.title,
+      price: course.price,
+      image: course.thumbnail || course.image || '/course-placeholder.png',
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="py-12">
+        <div className="container mx-auto px-4">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-3/4" />
+            <div className="h-4 bg-gray-200 rounded w-full" />
+            <div className="h-64 bg-gray-200 rounded" />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!course) {
     return (
@@ -38,15 +82,6 @@ export default function CourseDetailPage() {
         </div>
       </div>
     )
-  }
-
-  const handleAddToCart = () => {
-    addItem({
-      courseId: course.id,
-      title: course.title,
-      price: course.price,
-      image: course.image,
-    })
   }
 
   const displayedModules = showFullCurriculum ? modulesWithLessons : modulesWithLessons.slice(0, 2)
@@ -65,37 +100,31 @@ export default function CourseDetailPage() {
               <p className="text-lg text-gray-600 mb-4">{course.description}</p>
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
-                <Link href={`/courses?rating=${course.rating}`} className="flex items-center hover:text-primary transition-colors">
+                <div className="flex items-center">
                   <Star className="h-5 w-5 text-yellow-500 mr-1" />
-                  <span className="font-semibold">{course.rating}</span>
-                  <span className="ml-1">({course.students.toLocaleString()} students)</span>
-                </Link>
+                  <span className="font-semibold">{course.rating || 0}</span>
+                  <span className="ml-1">({(course.students || 0).toLocaleString()} students)</span>
+                </div>
                 <div className="flex items-center">
                   <Clock className="h-5 w-5 mr-1" />
-                  <span>{course.duration}</span>
+                  <span>{course.duration || 'Self-paced'}</span>
                 </div>
                 <div className="flex items-center">
                   <BookOpen className="h-5 w-5 mr-1" />
                   <span>{totalLessons} lessons</span>
                 </div>
-                <Link href={`/courses?level=${course.level}`} className="flex items-center hover:text-primary transition-colors">
-                  <Users className="h-5 w-5 mr-1" />
-                  <span>{course.level}</span>
-                </Link>
               </div>
 
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-gray-600">Instructor:</span>
-                <Link href={`/courses?instructor=${encodeURIComponent(course.instructor)}`} className="font-semibold text-blue-600 hover:underline">
-                  {course.instructor}
-                </Link>
+                <span className="font-semibold text-gray-900">{course.instructor_name || course.instructor || 'Profound IQ'}</span>
               </div>
 
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-gray-600">Category:</span>
-                <Link href={`/courses?category=${encodeURIComponent(course.category)}`} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium hover:bg-primary/20 transition-colors">
-                  {course.category}
-                </Link>
+                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                  {course.category || 'General'}
+                </span>
               </div>
             </div>
 
@@ -127,7 +156,7 @@ export default function CourseDetailPage() {
               <CardContent className="pt-6">
                 <h2 className="text-2xl font-bold mb-4">What You'll Learn</h2>
                 <ul className="space-y-3">
-                  {course.features.map((feature, index) => (
+                  {(course.features || ['Certificate of Completion', 'Practical exercises', 'Expert instruction']).map((feature: string, index: number) => (
                     <li key={index} className="flex items-start">
                       <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
                       <span>{feature}</span>
@@ -150,7 +179,7 @@ export default function CourseDetailPage() {
                             <h3 className="font-semibold text-gray-900">{module.title}</h3>
                             <p className="text-sm text-gray-600">{module.lessons.length} lessons</p>
                           </div>
-                          <Badge variant="outline">{module.unlockRule}</Badge>
+                          <Badge variant="outline">{module.unlockRule || 'sequential'}</Badge>
                         </div>
                       </div>
                       <div className="p-4 space-y-2">
@@ -163,10 +192,10 @@ export default function CourseDetailPage() {
                               <div>
                                 <div className="font-medium">{lesson.title}</div>
                                 <div className="text-sm text-gray-600 flex items-center gap-3">
-                                  <span>{lesson.durationMinutes} min</span>
+                                  <span>{lesson.durationMinutes || 10} min</span>
                                   <span className="flex items-center gap-1">
                                     <Zap className="h-3 w-3 text-blue-500" />
-                                    {lesson.xpReward} XP
+                                    {lesson.xpReward || 20} XP
                                   </span>
                                 </div>
                               </div>
@@ -198,15 +227,15 @@ export default function CourseDetailPage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-24">
               <CardContent className="pt-6">
-                <div className="relative h-48 w-full mb-4 rounded-lg overflow-hidden">
-                  <Image src={course.image} alt={course.title} fill className="object-cover" />
+                <div className="relative h-48 w-full mb-4 rounded-lg overflow-hidden bg-gray-100">
+                  <Image src={course.thumbnail || course.image || '/course-placeholder.png'} alt={course.title} fill className="object-cover" />
                 </div>
 
                 <div className="mb-4">
                   {course.originalPrice && (
                     <div className="text-lg text-gray-600 line-through mb-1">{formatPrice(course.originalPrice)}</div>
                   )}
-                  <div className="text-3xl font-bold text-primary">{formatPrice(course.price)}</div>
+                  <div className="text-3xl font-bold text-primary">{formatPrice(course.price || 0)}</div>
                 </div>
 
                 <Button onClick={handleAddToCart} className="w-full mb-3" size="lg">
@@ -245,4 +274,3 @@ export default function CourseDetailPage() {
     </div>
   )
 }
-

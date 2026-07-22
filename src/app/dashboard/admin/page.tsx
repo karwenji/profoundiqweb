@@ -110,7 +110,9 @@ export default function AdminDashboard() {
     }
   }, [addToast, refreshWorkflows])
 
-  useRealTimeSync(fetchData, 60000)
+  useRealTimeSync({
+    'progress:update': fetchData,
+  }, [addToast, refreshWorkflows])
 
   const handleApproveCourse = (courseId: string) => {
     approveCourse(courseId)

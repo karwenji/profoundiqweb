@@ -97,27 +97,23 @@ export default function StudentDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const mockCourses: CourseProgress[] = [
-    { id: '1', title: 'Leadership Excellence Program', progress: 66, lastAccessed: new Date(Date.now() - 2 * 86400000).toISOString(), nextLesson: 'Module 7: Strategic Decision Making', totalLessons: 42, completedLessons: 28 },
-    { id: '2', title: 'Digital Marketing Mastery', progress: 31, lastAccessed: new Date(Date.now() - 86400000).toISOString(), nextLesson: 'SEO Best Practices', totalLessons: 38, completedLessons: 12 },
-    { id: '3', title: 'Project Management Professional', progress: 100, lastAccessed: new Date(Date.now() - 7 * 86400000).toISOString(), totalLessons: 45, completedLessons: 45 },
-  ]
-
   const fetchData = useCallback(async () => {
     if (!user?.id) return
     try {
       setError(null)
-      const [statsRes] = await Promise.all([
+      const [statsResult] = await Promise.all([
         fetch(`/api/analytics/dashboard?role=student&userId=${user.id}`),
       ])
 
-      if (!statsRes.ok) {
+      if (!statsResult.ok) {
         throw new Error('Failed to fetch dashboard data')
       }
 
-      const statsResult = await statsRes.json()
-      if (statsResult.success) setStats(statsResult.data)
-      setCourses(mockCourses)
+      const result = await statsResult.json()
+      if (result.success) {
+        setStats(result.data.stats)
+        setCourses(result.data.courses || [])
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load dashboard'
       setError(message)
@@ -127,7 +123,9 @@ export default function StudentDashboard() {
     }
   }, [user?.id, addToast])
 
-  useRealTimeSync(fetchData, 60000)
+  useRealTimeSync({
+    'progress:update': fetchData,
+  }, [user?.id])
 
   const filteredCourses = courses.filter(
     (c) =>
@@ -208,7 +206,6 @@ export default function StudentDashboard() {
             subtitle={`${stats?.inProgressCourses || 0} in progress`}
             icon={<BookOpen className="h-6 w-6" />}
             href="/dashboard/enrolled"
-            trend={{ value: 12, label: 'vs last month', direction: 'up' }}
           />
           <StatCard
             title="Completed"
@@ -216,7 +213,6 @@ export default function StudentDashboard() {
             subtitle={`${stats?.certificatesEarned || 0} certificates`}
             icon={<CheckCircle className="h-6 w-6" />}
             href="/dashboard/certificates"
-            trend={{ value: 8, label: 'vs last month', direction: 'up' }}
           />
           <StatCard
             title="Learning Hours"
@@ -224,7 +220,6 @@ export default function StudentDashboard() {
             subtitle={`${stats?.streakDays || 0} day streak`}
             icon={<Clock className="h-6 w-6" />}
             href="/dashboard/student/analytics"
-            trend={{ value: 5, label: 'vs last week', direction: 'up' }}
           />
           <StatCard
             title="Total Investment"

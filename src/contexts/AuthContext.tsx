@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserRole } from '@/types'
+import { apiClient, setToken } from '@/lib/api/client'
 
 interface User {
   id: string
@@ -12,14 +13,15 @@ interface User {
   role: UserRole
   phone?: string
   bio?: string
+  avatar?: string
 }
 
 interface AuthContextType {
   user: User | null
-  login: (userData: User) => void
+  login: (email: string, password: string) => Promise<void>
   logout: () => void
   updateUser: (updates: Partial<User>) => void
-  refreshUser: () => void
+  refreshUser: () => Promise<void>
   isLoading: boolean
 }
 
@@ -30,27 +32,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    // Check if user is logged in on mount
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (e) {
-        localStorage.removeItem('user')
+  const refreshUser = async () => {
+    try {
+      const data = await apiClient.get<{ success: boolean; data: User }>('/api/auth/me')
+      if (data.success) {
+        setUser(data.data)
+      } else {
+        setUser(null)
       }
+    } catch {
+      setUser(null)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      refreshUser()
+    } else {
+      setIsLoading(false)
+    }
   }, [])
 
-  const login = (userData: User) => {
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
+  const login = async (email: string, password: string) => {
+    const data = await apiClient.post<{ success: boolean; user: User; token: string }>('/api/auth/login', {
+      email,
+      password,
+    })
+    if (data.success) {
+      setUser(data.user)
+      setToken(data.token)
+    } else {
+      throw new Error('Login failed')
+    }
   }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('user')
+    setToken(null)
     router.push('/auth/login')
   }
 
@@ -61,17 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('user', JSON.stringify(updated))
       return updated
     })
-  }
-
-  const refreshUser = () => {
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (e) {
-        localStorage.removeItem('user')
-      }
-    }
   }
 
   return (
@@ -88,3 +98,4 @@ export function useAuth() {
   }
   return context
 }
+

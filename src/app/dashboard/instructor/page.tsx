@@ -14,9 +14,9 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/dashboard/Toast'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import { RefreshCw, BookOpen, Users, Star, DollarSign, TrendingUp, Edit, Trash2, Eye, Plus, CheckCircle, XCircle } from 'lucide-react'
-import { courses } from '@/data/courses'
 import Link from 'next/link'
 import type { Course } from '@/types'
+import { apiClient } from '@/lib/api/client'
 
 interface InstructorStats {
   totalCourses: number
@@ -80,14 +80,24 @@ export default function InstructorDashboard() {
     if (!user?.id) return
     try {
       setError(null)
-      const res = await fetch(`/api/analytics/dashboard?role=instructor&userId=${user.id}`)
-      if (!res.ok) throw new Error('Failed to fetch stats')
-      const result = await res.json()
-      if (result.success) {
-        setStats(result.data)
-        const instructorCourses = courses.filter(c => c.instructor === user.name || c.instructorId === user.id)
-        setMyCourses(instructorCourses.length > 0 ? instructorCourses : courses.slice(0, 3))
+      const [statsResult, coursesResult] = await Promise.all([
+        fetch(`/api/analytics/dashboard?role=instructor&userId=${user.id}`),
+        fetch('/api/courses', { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } }),
+      ])
+
+      if (!statsResult.ok || !coursesResult.ok) {
+        throw new Error('Failed to fetch dashboard data')
       }
+
+      const statsData = await statsResult.json()
+      const coursesData = await coursesResult.json()
+
+      if (statsData.success) {
+        setStats(statsData.data.stats || statsData.data)
+      }
+      const allCourses = coursesData.data || coursesData || []
+      const instructorCourses = allCourses.filter((c: Course) => c.instructorId === user.id)
+      setMyCourses(instructorCourses.length > 0 ? instructorCourses : [])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load dashboard'
       setError(message)
@@ -97,7 +107,9 @@ export default function InstructorDashboard() {
     }
   }, [user?.id, addToast])
 
-  useRealTimeSync(fetchData, 60000)
+  useRealTimeSync({
+    'progress:update': fetchData,
+  }, [user?.id])
 
   const handleApproveCourse = async (courseId: string) => {
     try {
@@ -211,7 +223,6 @@ export default function InstructorDashboard() {
             subtitle={`KES ${(stats?.monthlyRevenue || 0).toLocaleString()} this month`}
             icon={<DollarSign className="h-6 w-6" />}
             href="/dashboard/instructor/earnings"
-            trend={{ value: 15, label: 'vs last month', direction: 'up' }}
           />
           <StatCard
             title="Total Students"
@@ -219,7 +230,6 @@ export default function InstructorDashboard() {
             subtitle={`${stats?.activeCourses || 0} active courses`}
             icon={<Users className="h-6 w-6" />}
             href="/dashboard/instructor/students"
-            trend={{ value: 10, label: 'new this month', direction: 'up' }}
           />
           <StatCard
             title="Average Rating"
@@ -238,25 +248,6 @@ export default function InstructorDashboard() {
         </div>
 
         <QuickActions actions={quickActions} columns={4} />
-
-        {/* Revenue Chart */}
-        <ChartPanel
-          title="Revenue Overview"
-          subtitle="Track your earnings over time"
-          type="line"
-          data={[
-            { name: 'Jan', value: 12000 },
-            { name: 'Feb', value: 19000 },
-            { name: 'Mar', value: 15000 },
-            { name: 'Apr', value: 22000 },
-            { name: 'May', value: 28000 },
-            { name: 'Jun', value: 35000 },
-          ]}
-          xAxisKey="name"
-          dataKey="value"
-          height={250}
-          colors={['#2563eb']}
-        />
 
         {/* Course Management */}
         <FilterBar

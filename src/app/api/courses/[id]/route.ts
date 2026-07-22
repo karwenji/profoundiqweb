@@ -1,54 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { courses as mockCourses } from '@/data/courses'
+import { getApiUrl } from '@/lib/api/client'
 
-let courses = [...mockCourses]
-let nextId = Math.max(...courses.map(c => Number(c.id)), 0) + 1
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000'
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
   try {
-    const course = courses.find(c => c.id.toString() === id)
-    if (!course) {
-      return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 })
-    }
-    return NextResponse.json({ success: true, data: course })
+    const { id } = await context.params
+    const res = await fetch(`${API_URL}/api/courses/${encodeURIComponent(id)}`, {
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
   } catch (error) {
     return NextResponse.json({ success: false, error: 'Failed to fetch course' }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
   try {
+    const { id } = await context.params
     const body = await request.json()
-    const index = courses.findIndex(c => c.id.toString() === id)
-    if (index === -1) {
-      return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 })
-    }
-
-    const updated = {
-      ...courses[index],
-      ...body,
-      id: courses[index].id,
-    }
-
-    courses[index] = updated
-    return NextResponse.json({ success: true, data: updated })
+    const token = request.headers.get('authorization')?.replace('Bearer ', '')
+    const res = await fetch(`${API_URL}/api/courses/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
   } catch (error) {
     return NextResponse.json({ success: false, error: 'Failed to update course' }, { status: 500 })
   }
 }
 
-export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const index = courses.findIndex(c => c.id.toString() === id)
-    if (index === -1) {
-      return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 })
-    }
-
-    courses.splice(index, 1)
-    return NextResponse.json({ success: true, message: 'Course deleted' })
+    const { id } = await context.params
+    const token = request.headers.get('authorization')?.replace('Bearer ', '')
+    const res = await fetch(`${API_URL}/api/courses/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
   } catch (error) {
     return NextResponse.json({ success: false, error: 'Failed to delete course' }, { status: 500 })
   }

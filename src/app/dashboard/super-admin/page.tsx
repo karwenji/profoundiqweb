@@ -121,7 +121,9 @@ export default function SuperAdminDashboard() {
     }
   }, [addToast, refreshWorkflows])
 
-  useRealTimeSync(fetchData, 60000)
+  useRealTimeSync({
+    'progress:update': fetchData,
+  }, [addToast, refreshWorkflows])
 
   const handleApproveInstructor = (userId: string) => {
     approveInstructor(userId)
