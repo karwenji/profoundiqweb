@@ -103,6 +103,15 @@ export function deleteRole(roleId: string): boolean {
   return false
 }
 
+export function getRolePermissions(roleId: string): string[] {
+  const role = roles.find(r => r.id === roleId)
+  return role ? [...role.permissions] : []
+}
+
+export function hasPermission(roleId: string, permissionId: string): boolean {
+  return getRolePermissions(roleId).includes(permissionId)
+}
+
 export function getAllPermissions(): Permission[] {
   return [...allPermissions]
 }

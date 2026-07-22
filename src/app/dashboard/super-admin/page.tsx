@@ -58,6 +58,9 @@ function SuperAdminDashboard() {
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     updateUserRole(userId, newRole)
     setUsers(getAllUsers())
+    if (userId === user?.id) {
+      setTimeout(() => window.location.reload(), 300)
+    }
   }
 
   const handleToggleActive = (userId: string, isActive: boolean) => {
