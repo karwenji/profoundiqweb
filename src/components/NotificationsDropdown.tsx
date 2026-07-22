@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { getUnreadNotificationCount } from '@/lib/communications'
 import {
   Bell,
   Check,

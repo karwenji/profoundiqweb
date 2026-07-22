@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { findUserByEmail, createUser, type UserRole } from '@/lib/users'
+import { findUserByEmail, createUser } from '@/lib/users'
+import type { UserRole } from '@/types'
 
 export async function POST(request: Request) {
   try {

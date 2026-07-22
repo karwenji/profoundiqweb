@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { getAllUsers, updateUserRole, deactivateUser, activateUser, UserRole } from '@/lib/users'
+import { getAllUsers, updateUserRole, deactivateUser, activateUser } from '@/lib/users'
+import type { UserRole } from '@/types'
 import { UserPlus, CheckCircle, XCircle, Search, Eye, Save, AlertCircle } from 'lucide-react'
 
 interface PendingChange {

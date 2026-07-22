@@ -1,7 +1,7 @@
 // Shared in-memory user storage for authentication and user management
 // In production, replace this with a real database
 
-export type UserRole = 'super_admin' | 'admin' | 'instructor' | 'student';
+import type { UserRole } from '@/types'
 
 export interface User {
   id: string;
@@ -179,8 +179,4 @@ export function rejectInstructor(userId: string): boolean {
     return true
   }
   return false
-}
-
-export function getPendingStudentEnrollments(): { studentId: string; courseId: string; courseTitle: string }[] {
-  return []
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getAllUsers, updateUserRole, deactivateUser, activateUser, findUserById, type UserRole } from '@/lib/users'
+import { getAllUsers, updateUserRole, deactivateUser, activateUser, findUserById } from '@/lib/users'
+import type { UserRole } from '@/types'
 
 // GET /api/users - Get all users (Super Admin and Admin only)
 export async function GET(request: Request) {

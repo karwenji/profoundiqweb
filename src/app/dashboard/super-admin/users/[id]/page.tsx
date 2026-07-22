@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { getAllUsers, UserRole } from '@/lib/users'
+import { getAllUsers } from '@/lib/users'
+import type { UserRole } from '@/types'
 import { ArrowLeft, Mail, Calendar, Shield, User as UserIcon, CheckCircle, XCircle } from 'lucide-react'
 
 function UserProfilePage() {

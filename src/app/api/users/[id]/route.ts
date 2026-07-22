@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { findUserById, updateUserRole, deactivateUser, activateUser, type UserRole } from '@/lib/users'
+import { findUserById, updateUserRole, deactivateUser, activateUser } from '@/lib/users'
+import type { UserRole } from '@/types'
 
 // PATCH /api/users/[id] - Update user role or status
 export async function PATCH(
