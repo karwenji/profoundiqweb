@@ -17,6 +17,7 @@ import { useToast } from '@/components/dashboard/Toast'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import { RefreshCw, BookOpen, Clock, DollarSign, CheckCircle, Award, TrendingUp, Search, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
+import { getModulesWithLessons, getLessonsByModule } from '@/lib/courseWorkflow'
 
 interface CourseProgress {
   id: string
@@ -43,7 +44,7 @@ interface StudentStats {
 const quickActions = [
   {
     label: 'Continue Learning',
-    href: '/dashboard/enrolled',
+    href: '/dashboard/student',
     icon: <BookOpen className="h-4 w-4" />,
     description: 'Pick up where you left off',
     variant: 'default' as const,
@@ -56,20 +57,36 @@ const quickActions = [
     variant: 'outline' as const,
   },
   {
-    label: 'My Certificates',
-    href: '/dashboard/certificates',
+    label: 'Achievements',
+    href: '/dashboard/student/achievements',
     icon: <Award className="h-4 w-4" />,
-    description: 'View achievements',
+    description: 'Badges, XP, and certificates',
     variant: 'outline' as const,
   },
   {
-    label: 'Get Support',
-    href: '/dashboard/support',
-    icon: <MessageSquare className="h-4 w-4" />,
-    description: 'We\'re here to help',
+    label: 'Leaderboard',
+    href: '/dashboard/student/leaderboard',
+    icon: <TrendingUp className="h-4 w-4" />,
+    description: 'See how you rank',
     variant: 'outline' as const,
   },
 ]
+
+function getFirstLessonId(courseId: string): string | undefined {
+  const modules = getModulesWithLessons(courseId)
+  const firstModule = modules[0]
+  if (!firstModule) return undefined
+  const lessons = getLessonsByModule(firstModule.id)
+  return lessons[0]?.id
+}
+
+function getResumeLink(courseId: string): string {
+  const firstLessonId = getFirstLessonId(courseId)
+  if (firstLessonId) {
+    return `/courses/${courseId}/learn/${firstLessonId}`
+  }
+  return `/courses/${courseId}`
+}
 
 export default function StudentDashboard() {
   const { user } = useAuth()
@@ -234,7 +251,7 @@ export default function StudentDashboard() {
               columns={columns}
               keyExtractor={(item) => item.id}
               onRowClick={(item) => {
-                window.location.href = `/dashboard/enrolled?course=${item.id}`
+                window.location.href = getResumeLink(item.id)
               }}
               loading={loading}
               emptyState={
@@ -247,7 +264,7 @@ export default function StudentDashboard() {
               }
               actions={(item) => (
                 <Button size="sm" variant="outline" asChild>
-                  <Link href={`/dashboard/enrolled?course=${item.id}`}>Resume</Link>
+                  <Link href={getResumeLink(item.id)}>Resume</Link>
                 </Button>
               )}
             />
