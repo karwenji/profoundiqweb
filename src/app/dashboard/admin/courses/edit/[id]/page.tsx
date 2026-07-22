@@ -13,8 +13,20 @@ import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
-import { courses } from '@/data/courses'
-import { formatCurrency } from '@/lib/currency'
+
+const CATEGORIES = [
+  { value: 'leadership', label: 'Leadership' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'technology', label: 'Technology' },
+  { value: 'business', label: 'Business' },
+  { value: 'design', label: 'Design' },
+]
+
+const STATUSES = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'published', label: 'Published' },
+  { value: 'archived', label: 'Archived' },
+]
 
 function EditCoursePage() {
   const params = useParams()
@@ -22,6 +34,7 @@ function EditCoursePage() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     instructor: '',
@@ -36,33 +49,69 @@ function EditCoursePage() {
   })
 
   useEffect(() => {
-    const course = courses.find(c => c.id.toString() === params.id)
-    if (course) {
-      setFormData({
-        title: course.title,
-        instructor: course.instructor,
-        category: course.category,
-        price: course.price.toString(),
-        duration: course.duration || '8 weeks',
-        lessons: course.lessons?.toString() || '12',
-        description: course.description || '',
-        image: course.image || '',
-        status: course.status || 'published',
-        adminSplit: (course as any).adminSplit?.toString() || '40',
+    const courseId = params.id as string
+    if (!courseId) return
+
+    fetch(`/api/courses/${courseId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('not_found')
+        return res.json()
       })
-    }
-    setFetching(false)
+      .then(result => {
+        if (result.success && result.data) {
+          const course = result.data
+          setFormData({
+            title: course.title || '',
+            instructor: course.instructor || '',
+            category: course.category || '',
+            price: course.price?.toString() || '',
+            duration: course.duration || '8 weeks',
+            lessons: course.lessons?.toString() || '12',
+            description: course.description || '',
+            image: course.image || '',
+            status: course.status || 'published',
+            adminSplit: course.adminSplit?.toString() || '40',
+          })
+        } else {
+          setNotFound(true)
+        }
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setFetching(false))
   }, [params.id])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    
-    // Simulate API call to update course
-    setTimeout(() => {
-      setLoading(false)
+
+    try {
+      const response = await fetch(`/api/courses/${params.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          instructor: formData.instructor,
+          category: formData.category,
+          price: parseFloat(formData.price) || 0,
+          duration: formData.duration,
+          lessons: parseInt(formData.lessons) || 12,
+          description: formData.description,
+          image: formData.image,
+          status: formData.status,
+          adminSplit: parseInt(formData.adminSplit) || 40,
+        }),
+      })
+
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to update course')
+      }
+
       router.push('/dashboard/admin/courses')
-    }, 2000)
+    } catch (err: any) {
+      alert(err.message || 'Failed to update course')
+      setLoading(false)
+    }
   }
 
   const handleChange = (field: string, value: string) => {
@@ -76,6 +125,22 @@ function EditCoursePage() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600">Loading course details...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (notFound) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Course Not Found</h2>
+            <p className="text-gray-600 mb-4">The course you're trying to edit doesn't exist.</p>
+            <Link href="/dashboard/admin/courses">
+              <Button>Back to Courses</Button>
+            </Link>
           </div>
         </div>
       </DashboardLayout>
@@ -104,8 +169,8 @@ function EditCoursePage() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <Label>Course Title</Label>
-                  <Input 
-                    placeholder="Enter course title" 
+                  <Input
+                    placeholder="Enter course title"
                     value={formData.title}
                     onChange={(e) => handleChange('title', e.target.value)}
                     required
@@ -113,8 +178,8 @@ function EditCoursePage() {
                 </div>
                 <div>
                   <Label>Instructor Name</Label>
-                  <Input 
-                    placeholder="Enter instructor name" 
+                  <Input
+                    placeholder="Enter instructor name"
                     value={formData.instructor}
                     onChange={(e) => handleChange('instructor', e.target.value)}
                     required
@@ -127,19 +192,19 @@ function EditCoursePage() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="leadership">Leadership</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="technology">Technology</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
-                      <SelectItem value="design">Design</SelectItem>
+                      {CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Price (NGN)</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="Enter price" 
+                  <Input
+                    type="number"
+                    placeholder="Enter price"
                     value={formData.price}
                     onChange={(e) => handleChange('price', e.target.value)}
                     required
@@ -147,8 +212,8 @@ function EditCoursePage() {
                 </div>
                 <div>
                   <Label>Duration</Label>
-                  <Input 
-                    placeholder="e.g., 8 weeks" 
+                  <Input
+                    placeholder="e.g., 8 weeks"
                     value={formData.duration}
                     onChange={(e) => handleChange('duration', e.target.value)}
                     required
@@ -156,9 +221,9 @@ function EditCoursePage() {
                 </div>
                 <div>
                   <Label>Number of Lessons</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="Enter number of lessons" 
+                  <Input
+                    type="number"
+                    placeholder="Enter number of lessons"
                     value={formData.lessons}
                     onChange={(e) => handleChange('lessons', e.target.value)}
                     required
@@ -171,19 +236,21 @@ function EditCoursePage() {
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
+                      {STATUSES.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Admin Revenue Split (%)</Label>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     min="0"
                     max="100"
-                    placeholder="Default: 40" 
+                    placeholder="Default: 40"
                     value={formData.adminSplit}
                     onChange={(e) => handleChange('adminSplit', e.target.value)}
                   />
@@ -193,8 +260,8 @@ function EditCoursePage() {
 
               <div>
                 <Label>Description</Label>
-                <Textarea 
-                  placeholder="Enter course description..." 
+                <Textarea
+                  placeholder="Enter course description..."
                   value={formData.description}
                   onChange={(e) => handleChange('description', e.target.value)}
                   rows={4}
@@ -204,8 +271,8 @@ function EditCoursePage() {
 
               <div>
                 <Label>Image URL</Label>
-                <Input 
-                  placeholder="https://..." 
+                <Input
+                  placeholder="https://..."
                   value={formData.image}
                   onChange={(e) => handleChange('image', e.target.value)}
                   required

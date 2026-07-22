@@ -1,5 +1,5 @@
-// Shared in-memory settings storage
-// In production, replace this with a real database
+// Client-safe settings helpers.
+// Persistence is handled by API routes using data/settings-store.json.
 
 export interface AdminSettings {
   allowInstructorRegistration: boolean
@@ -37,7 +37,6 @@ export interface PaymentMethod {
   accountDetails?: string
 }
 
-// Default settings
 let adminSettings: AdminSettings = {
   allowInstructorRegistration: true,
   autoApproveCourses: false,
@@ -75,7 +74,6 @@ let paymentMethods: PaymentMethod[] = [
   },
 ]
 
-// Admin Settings
 export function getAdminSettings(): AdminSettings {
   return { ...adminSettings }
 }
@@ -85,7 +83,6 @@ export function updateAdminSettings(settings: Partial<AdminSettings>): AdminSett
   return { ...adminSettings }
 }
 
-// System Settings
 export function getSystemSettings(): SystemSettings {
   return { ...systemSettings }
 }
@@ -103,7 +100,6 @@ export function getDefaultCurrency(): string {
   return systemSettings.defaultCurrency
 }
 
-// Webhook Settings
 export function getWebhookSettings(): WebhookSettings {
   return { ...webhookSettings }
 }
@@ -113,7 +109,6 @@ export function updateWebhookSettings(settings: Partial<WebhookSettings>): Webho
   return { ...webhookSettings }
 }
 
-// Payment Methods
 export function getPaymentMethods(): PaymentMethod[] {
   return paymentMethods.map(m => ({ ...m }))
 }
@@ -139,4 +134,40 @@ export function deletePaymentMethod(id: string): boolean {
     return true
   }
   return false
+}
+
+export function getAllSettings() {
+  return {
+    adminSettings: getAdminSettings(),
+    systemSettings: getSystemSettings(),
+    webhookSettings: getWebhookSettings(),
+    paymentMethods: getPaymentMethods(),
+  }
+}
+
+export function updateAllSettings(updates: {
+  adminSettings?: Partial<AdminSettings>
+  systemSettings?: Partial<SystemSettings>
+  webhookSettings?: Partial<WebhookSettings>
+  paymentMethods?: PaymentMethod[]
+}) {
+  if (updates.adminSettings) updateAdminSettings(updates.adminSettings)
+  if (updates.systemSettings) updateSystemSettings(updates.systemSettings)
+  if (updates.webhookSettings) updateWebhookSettings(updates.webhookSettings)
+  if (updates.paymentMethods) updatePaymentMethods(updates.paymentMethods)
+  return getAllSettings()
+}
+
+export function loadClientSettings(
+  saved?: Partial<{
+    adminSettings: AdminSettings
+    systemSettings: SystemSettings
+    webhookSettings: WebhookSettings
+    paymentMethods: PaymentMethod[]
+  }>
+) {
+  if (saved?.adminSettings) adminSettings = saved.adminSettings
+  if (saved?.systemSettings) systemSettings = saved.systemSettings
+  if (saved?.webhookSettings) webhookSettings = saved.webhookSettings
+  if (saved?.paymentMethods) paymentMethods = saved.paymentMethods
 }
