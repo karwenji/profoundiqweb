@@ -102,10 +102,24 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  CREATE TABLE IF NOT EXISTS announcements (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    target_roles TEXT,
+    target_course_id TEXT,
+    priority TEXT DEFAULT 'normal',
+    is_active INTEGER DEFAULT 1,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id, is_read);
   CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
   CREATE INDEX IF NOT EXISTS idx_messages_parent ON messages(parent_id);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+  CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(is_active, created_at);
 `);
 
 module.exports = db;

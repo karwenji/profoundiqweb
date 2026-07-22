@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { BookOpen, Award, Clock, TrendingUp, Loader2, CheckCircle, DollarSign, RefreshCw } from 'lucide-react'
+import AnnouncementsBanner from '@/components/AnnouncementsBanner'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import Link from 'next/link'
 
@@ -72,6 +73,11 @@ function StudentDashboard() {
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+        </div>
+
+        {/* Announcements */}
+        <div className="mb-8">
+          <AnnouncementsBanner />
         </div>
 
         {/* Stats Cards */}

@@ -8,6 +8,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getAllUsers } from '@/lib/users'
 import { Users, BookOpen, TrendingUp, DollarSign, Loader2, CheckCircle, Clock, RefreshCw } from 'lucide-react'
+import AnnouncementsBanner from '@/components/AnnouncementsBanner'
 import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import Link from 'next/link'
 
@@ -83,6 +84,11 @@ function AdminDashboard() {
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+        </div>
+
+        {/* Announcements */}
+        <div className="mb-8">
+          <AnnouncementsBanner />
         </div>
 
         {/* Stats Cards */}

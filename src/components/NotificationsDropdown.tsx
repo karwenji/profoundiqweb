@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { Bell, Check, MessageSquare, UserPlus, CreditCard, AlertCircle, Loader2 } from 'lucide-react'
+import { Bell, Check, MessageSquare, UserPlus, CreditCard, AlertCircle, Loader2, Trash2, CheckCheck } from 'lucide-react'
 
 interface Notification {
   id: string
@@ -75,6 +75,59 @@ export default function NotificationsDropdown() {
     }
   }
 
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ markAllRead: true }),
+      })
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })))
+      setUnreadCount(0)
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
+    }
+  }
+
+  const deleteNotification = async (id: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id }),
+      })
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    } catch (error) {
+      console.error('Failed to delete notification:', error)
+    }
+  }
+
+  const clearReadNotifications = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ clearRead: true }),
+      })
+      setNotifications((prev) => prev.filter((n) => n.is_read === 0))
+    } catch (error) {
+      console.error('Failed to clear notifications:', error)
+    }
+  }
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'message': return <MessageSquare className="h-4 w-4 text-blue-500" />
@@ -119,12 +172,34 @@ export default function NotificationsDropdown() {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">Notifications</h3>
-            {unreadCount > 0 && (
-              <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">
-                {unreadCount} new
-              </span>
-            )}
+            <div>
+              <h3 className="font-bold text-gray-900">Notifications</h3>
+              {unreadCount > 0 && (
+                <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">
+                  {unreadCount} new
+                </span>
+              )}
+            </div>
+            <div className="flex gap-1">
+              {unreadCount > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); markAllAsRead() }}
+                  className="text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded hover:bg-gray-100"
+                  title="Mark all as read"
+                >
+                  <CheckCheck className="h-4 w-4" />
+                </button>
+              )}
+              {notifications.some((n) => n.is_read === 1) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); clearReadNotifications() }}
+                  className="text-xs text-gray-500 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-gray-100"
+                  title="Clear read notifications"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="max-h-96 overflow-y-auto">
@@ -163,6 +238,13 @@ export default function NotificationsDropdown() {
                     {notif.is_read === 0 && (
                       <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-2" />
                     )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id) }}
+                      className="text-gray-400 hover:text-red-600 flex-shrink-0"
+                      title="Delete notification"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
                 </div>
               ))

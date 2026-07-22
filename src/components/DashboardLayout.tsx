@@ -65,7 +65,6 @@ const instructorMenu: NavItem[] = [
   { label: 'Students', href: '/dashboard/instructor/students', icon: Users },
   { label: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { label: 'Earnings', href: '/dashboard/instructor/earnings', icon: DollarSign },
-  { label: 'Messages', href: '/dashboard/instructor/messages', icon: MessageSquare },
   { label: 'Profile', href: '/dashboard/profile', icon: User },
 ]
 
