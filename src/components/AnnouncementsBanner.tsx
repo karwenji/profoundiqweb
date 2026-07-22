@@ -21,6 +21,25 @@ export default function AnnouncementsBanner() {
 
   useEffect(() => {
     if (!user) return
+
+    const sessionKey = `announcements_${user.id}`
+    const cached = sessionStorage.getItem(sessionKey)
+    const cachedAt = sessionStorage.getItem(`${sessionKey}_ts`)
+
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached)
+        setAnnouncements(parsed)
+        const age = Date.now() - Number(cachedAt || 0)
+        if (age < 60 * 1000) {
+          setLoading(false)
+          return
+        }
+      } catch {
+        sessionStorage.removeItem(sessionKey)
+      }
+    }
+
     fetchAnnouncements()
   }, [user])
 
@@ -31,8 +50,13 @@ export default function AnnouncementsBanner() {
         headers: { Authorization: `Bearer ${token}` },
       })
       const result = await response.json()
-      if (result.success) {
-        setAnnouncements(result.data || [])
+      if (result.success && Array.isArray(result.data)) {
+        setAnnouncements(result.data)
+        if (user?.id) {
+          const sessionKey = `announcements_${user.id}`
+          sessionStorage.setItem(sessionKey, JSON.stringify(result.data))
+          sessionStorage.setItem(`${sessionKey}_ts`, String(Date.now()))
+        }
       }
     } catch (error) {
       console.error('Failed to fetch announcements:', error)

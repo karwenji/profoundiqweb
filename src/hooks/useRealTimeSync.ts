@@ -1,17 +1,20 @@
 import { useEffect, useCallback } from 'react'
 
-// Custom hook for polling-based real-time updates (more reliable than WebSocket for now)
-export function useRealTimeSync(fetchData: () => Promise<void>, intervalMs: number = 10000) {
+type FetchFn = () => Promise<void>
+
+// Custom hook for polling-based real-time updates.
+// skipInitial: if true, only start polling after manual trigger; useful when the page already fetched on mount.
+export function useRealTimeSync(fetchData: FetchFn, intervalMs: number = 30000, skipInitial = false) {
+  const stableFetch = useCallback(fetchData, [fetchData])
+
   useEffect(() => {
-    // Initial fetch
-    fetchData()
+    if (!skipInitial) {
+      stableFetch()
+    }
 
-    // Set up polling interval
-    const interval = setInterval(fetchData, intervalMs)
-
-    // Cleanup on unmount
+    const interval = setInterval(stableFetch, intervalMs)
     return () => clearInterval(interval)
-  }, [fetchData, intervalMs])
+  }, [stableFetch, intervalMs, skipInitial])
 }
 
 // Hook for manual refresh with loading state
