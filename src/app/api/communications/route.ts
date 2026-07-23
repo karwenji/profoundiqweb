@@ -57,146 +57,166 @@ function authOr401(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = authOr401(request)
-  if (auth.error) return auth.error
-  const user = auth.user!
+  try {
+    const auth = authOr401(request)
+    if (auth.error) return auth.error
+    const user = auth.user!
 
-  const { searchParams } = new URL(request.url)
-  const resource = searchParams.get('resource')
+    const { searchParams } = new URL(request.url)
+    const resource = searchParams.get('resource')
 
-  if (resource === 'conversations') {
-    return ok(getConversations(user.id))
+    if (resource === 'conversations') {
+      return ok(getConversations(user.id))
+    }
+
+    if (resource === 'messages') {
+      const conversationId = searchParams.get('conversation_id')
+      if (!conversationId) return fail('conversation_id is required')
+      return ok(getMessages(conversationId))
+    }
+
+    if (resource === 'announcements') {
+      return ok(getAnnouncementsForUser(user.id, user.role))
+    }
+
+    if (resource === 'notifications') {
+      return ok(getNotificationsForUser(user.id))
+    }
+
+    if (resource === 'notifications/unread-count') {
+      return ok({ count: getUnreadNotificationCount(user.id) })
+    }
+
+    if (resource === 'users') {
+      const search = searchParams.get('search') || ''
+      const role = searchParams.get('role') || 'all'
+      return ok(searchUsers(search, role))
+    }
+
+    if (resource === 'users/role') {
+      const role = searchParams.get('role')
+      if (!role) return fail('role is required')
+      return ok(getUsersForRole(role))
+    }
+
+    if (resource === 'courses') {
+      return ok(getCoursesForStudents())
+    }
+
+    return fail('Unknown resource')
+  } catch (error) {
+    console.error('Communications GET error:', error)
+    return fail('Failed to process request', 500)
   }
-
-  if (resource === 'messages') {
-    const conversationId = searchParams.get('conversation_id')
-    if (!conversationId) return fail('conversation_id is required')
-    return ok(getMessages(conversationId))
-  }
-
-  if (resource === 'announcements') {
-    return ok(getAnnouncementsForUser(user.id, user.role))
-  }
-
-  if (resource === 'notifications') {
-    return ok(getNotificationsForUser(user.id))
-  }
-
-  if (resource === 'notifications/unread-count') {
-    return ok({ count: getUnreadNotificationCount(user.id) })
-  }
-
-  if (resource === 'users') {
-    const search = searchParams.get('search') || ''
-    const role = searchParams.get('role') || 'all'
-    return ok(searchUsers(search, role))
-  }
-
-  if (resource === 'users/role') {
-    const role = searchParams.get('role')
-    if (!role) return fail('role is required')
-    return ok(getUsersForRole(role))
-  }
-
-  if (resource === 'courses') {
-    return ok(getCoursesForStudents())
-  }
-
-  return fail('Unknown resource')
 }
 
 export async function POST(request: NextRequest) {
-  const auth = authOr401(request)
-  if (auth.error) return auth.error
-  const user = auth.user!
+  try {
+    const auth = authOr401(request)
+    if (auth.error) return auth.error
+    const user = auth.user!
 
-  const body = await request.json()
-  const { action } = body
+    const body = await request.json()
+    const { action } = body
 
-  if (action === 'send_message') {
-    const { conversation_id, recipient_id, recipient_ids, group_role, group_course_id, subject, body: messageBody } = body
-    if (!messageBody || (!conversation_id && !recipient_id && !recipient_ids && !group_role && !group_course_id)) {
-      return fail('Message body and at least one recipient are required')
+    if (action === 'send_message') {
+      const { conversation_id, recipient_id, recipient_ids, group_role, group_course_id, subject, body: messageBody } = body
+      if (!messageBody || (!conversation_id && !recipient_id && !recipient_ids && !group_role && !group_course_id)) {
+        return fail('Message body and at least one recipient are required')
+      }
+
+      if (conversation_id) {
+        const msg = sendMessage(conversation_id, user.id, messageBody)
+        return ok({ message: msg, sent_count: 1 })
+      }
+
+      const conversation = createConversation(
+        {
+          conversation_id,
+          recipient_id,
+          recipient_ids,
+          group_role,
+          group_course_id,
+          subject,
+          body: messageBody,
+          type: group_role || group_course_id ? 'group' : 'direct',
+        },
+        user.id
+      )
+
+      const msg = sendMessage(conversation.id, user.id, messageBody)
+      return ok({ message: msg, conversation, sent_count: conversation.participants.length - 1 })
     }
 
-    if (conversation_id) {
-      const msg = sendMessage(conversation_id, user.id, messageBody)
-      return ok({ message: msg, sent_count: 1 })
+    if (action === 'create_announcement') {
+      if (!hasPermission(user.role, 'system_settings') && !hasPermission(user.role, 'announcements')) {
+        return fail('Forbidden', 403)
+      }
+      const { title, body: announcementBody, priority, target_roles, target_course_ids } = body
+      if (!title || !announcementBody) return fail('Title and body are required')
+
+      const ann = createAnnouncement(
+        { title, body: announcementBody, priority, target_roles, target_course_ids },
+        user.id
+      )
+      return ok(ann)
     }
 
-    const conversation = createConversation(
-      {
-        conversation_id,
-        recipient_id,
-        recipient_ids,
-        group_role,
-        group_course_id,
-        subject,
-        body: messageBody,
-        type: group_role || group_course_id ? 'group' : 'direct',
-      },
-      user.id
-    )
-
-    const msg = sendMessage(conversation.id, user.id, messageBody)
-    return ok({ message: msg, conversation, sent_count: conversation.participants.length - 1 })
+    return fail('Unknown action')
+  } catch (error) {
+    console.error('Communications POST error:', error)
+    return fail('Failed to process request', 500)
   }
-
-  if (action === 'create_announcement') {
-    if (!hasPermission(user.role, 'system_settings') && !hasPermission(user.role, 'announcements')) {
-      return fail('Forbidden', 403)
-    }
-    const { title, body: announcementBody, priority, target_roles, target_course_ids } = body
-    if (!title || !announcementBody) return fail('Title and body are required')
-
-    const ann = createAnnouncement(
-      { title, body: announcementBody, priority, target_roles, target_course_ids },
-      user.id
-    )
-    return ok(ann)
-  }
-
-  return fail('Unknown action')
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = authOr401(request)
-  if (auth.error) return auth.error
-  const user = auth.user!
+  try {
+    const auth = authOr401(request)
+    if (auth.error) return auth.error
+    const user = auth.user!
 
-  const body = await request.json()
-  const { notification_id, mark_all_read } = body
+    const body = await request.json()
+    const { notification_id, mark_all_read } = body
 
-  if (mark_all_read) {
-    markAllNotificationsRead(user.id)
-    return ok({ success: true })
+    if (mark_all_read) {
+      markAllNotificationsRead(user.id)
+      return ok({ success: true })
+    }
+
+    if (notification_id) {
+      markNotificationRead(notification_id)
+      return ok({ success: true })
+    }
+
+    return fail('Invalid request')
+  } catch (error) {
+    console.error('Communications PATCH error:', error)
+    return fail('Failed to process request', 500)
   }
-
-  if (notification_id) {
-    markNotificationRead(notification_id)
-    return ok({ success: true })
-  }
-
-  return fail('Invalid request')
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = authOr401(request)
-  if (auth.error) return auth.error
-  const user = auth.user!
+  try {
+    const auth = authOr401(request)
+    if (auth.error) return auth.error
+    const user = auth.user!
 
-  const body = await request.json()
-  const { notification_id, clear_read } = body
+    const body = await request.json()
+    const { notification_id, clear_read } = body
 
-  if (clear_read) {
-    clearReadNotifications(user.id)
-    return ok({ success: true })
+    if (clear_read) {
+      clearReadNotifications(user.id)
+      return ok({ success: true })
+    }
+
+    if (notification_id) {
+      deleteNotification(notification_id)
+      return ok({ success: true })
+    }
+
+    return fail('Invalid request')
+  } catch (error) {
+    console.error('Communications DELETE error:', error)
+    return fail('Failed to process request', 500)
   }
-
-  if (notification_id) {
-    deleteNotification(notification_id)
-    return ok({ success: true })
-  }
-
-  return fail('Invalid request')
 }

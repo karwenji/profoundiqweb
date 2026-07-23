@@ -36,8 +36,18 @@ async function api<T>(path: string, options: RequestInit = {}, baseUrl = BACKEND
   }
 
   if (!res.ok) {
+    const contentType = res.headers.get('content-type') || ''
+    const isHtml = contentType.includes('text/html')
+    if (isHtml) {
+      throw new Error(`Server error: received HTML instead of JSON from ${url}`)
+    }
     const error = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
     throw new Error(error.error || error.message || `API error ${res.status}`)
+  }
+
+  const contentType = res.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Invalid response: expected JSON from ${url}, got ${contentType}`)
   }
 
   return res.json()

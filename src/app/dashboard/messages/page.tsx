@@ -67,10 +67,16 @@ export default function MessagesPage() {
       const res = await fetch(`/api/communications${path}`, {
         ...options,
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
           ...(options.headers || {}),
         },
       })
+      const contentType = res.headers.get('content-type') || ''
+      const isJson = contentType.includes('application/json')
+      if (!isJson) {
+        throw new Error(`Server error: expected JSON response from /api/communications${path}, got ${contentType || 'no content-type'}`)
+      }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Request failed')
       return data
