@@ -16,7 +16,7 @@ import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import { RefreshCw, BookOpen, Users, Star, DollarSign, TrendingUp, Edit, Trash2, Eye, Plus, CheckCircle, XCircle } from 'lucide-react'
 import Link from 'next/link'
 import type { Course } from '@/types'
-import { apiClient } from '@/lib/api/client'
+import { nextApi } from '@/lib/api/client'
 
 interface InstructorStats {
   totalCourses: number

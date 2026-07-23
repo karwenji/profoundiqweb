@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserRole } from '@/types'
-import { apiClient, setToken } from '@/lib/api/client'
+import { nextApi, setToken } from '@/lib/api/client'
 
 interface User {
   id: string
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const data = await apiClient.get<{ success: boolean; data: User }>('/api/auth/me')
+      const data = await nextApi.get<{ success: boolean; data: User }>('/api/auth/me')
       if (data.success) {
         setUser(data.data)
       } else {
@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string) => {
-    const data = await apiClient.post<{ success: boolean; user: User; token: string }>('/api/auth/login', {
+    const data = await nextApi.post<{ success: boolean; user: User; token: string }>('/api/auth/login', {
       email,
       password,
     })

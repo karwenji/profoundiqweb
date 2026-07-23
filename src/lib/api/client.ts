@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000'
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000'
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -10,16 +10,16 @@ async function safeFetch(url: string, options: RequestInit = {}, timeout = 4000)
   const timer = setTimeout(() => controller.abort(), timeout)
   try {
     return await fetch(url, { ...options, signal: controller.signal })
-  } catch (err) {
+  } catch {
     throw new Error('Network error: unable to reach API server')
   } finally {
     clearTimeout(timer)
   }
 }
 
-export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function api<T>(path: string, options: RequestInit = {}, baseUrl = BACKEND_API_URL): Promise<T> {
   const token = getToken()
-  const url = `${API_URL}${path}`
+  const url = `${baseUrl}${path}`
 
   let res: Response
   try {
@@ -50,6 +50,13 @@ export const apiClient = {
   delete: <T>(path: string) => api<T>(path, { method: 'DELETE' }),
 }
 
+export const nextApi = {
+  get: <T>(path: string) => api<T>(path, {}, ''),
+  post: <T>(path: string, body: unknown) => api<T>(path, { method: 'POST', body: JSON.stringify(body) }, ''),
+  put: <T>(path: string, body: unknown) => api<T>(path, { method: 'PUT', body: JSON.stringify(body) }, ''),
+  delete: <T>(path: string) => api<T>(path, { method: 'DELETE' }, ''),
+}
+
 export function setToken(token: string | null) {
   if (typeof window === 'undefined') return
   if (token) localStorage.setItem('token', token)
@@ -57,5 +64,5 @@ export function setToken(token: string | null) {
 }
 
 export function getApiUrl(path: string): string {
-  return `${API_URL}${path}`
+  return `${BACKEND_API_URL}${path}`
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { apiClient } from '@/lib/api/client'
+import { nextApi } from '@/lib/api/client'
 import { getModulesWithLessons } from '@/lib/courseWorkflow'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,7 +33,7 @@ export default function CourseDetailPage() {
     const fetchCourse = async () => {
       try {
         setLoading(true)
-        const result = await apiClient.get<{ success: boolean; data: any }>(`/api/courses/${courseId}`)
+        const result = await nextApi.get<{ success: boolean; data: any }>(`/api/courses/${courseId}`)
         if (!cancelled) setCourse(result.data || null)
       } catch {
         if (!cancelled) addToast('error', 'Failed to load course')

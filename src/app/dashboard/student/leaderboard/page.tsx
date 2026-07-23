@@ -6,7 +6,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { LeaderboardTable } from '@/components/gamification/LeaderboardTable'
 import { Card, CardContent } from '@/components/ui/card'
-import { apiClient } from '@/lib/api/client'
+import { nextApi } from '@/lib/api/client'
 import { useToast } from '@/components/dashboard/Toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -36,7 +36,7 @@ export default function LeaderboardPage() {
       try {
         setLoading(true)
         const params = new URLSearchParams({ scope, period })
-        const result = await apiClient.get<{ success: boolean; data: LeaderboardEntry[] }>(`/api/gamification/leaderboard?${params.toString()}`)
+        const result = await nextApi.get<{ success: boolean; data: LeaderboardEntry[] }>(`/api/gamification/leaderboard?${params.toString()}`)
         if (!cancelled) setEntries(result.data || [])
       } catch (err) {
         if (!cancelled) addToast('error', err instanceof Error ? err.message : 'Failed to load leaderboard')

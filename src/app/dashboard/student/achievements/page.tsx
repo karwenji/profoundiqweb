@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Trophy, Flame, Zap, Download, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import type { Badge } from '@/types/courseWorkflow'
-import { apiClient } from '@/lib/api/client'
+import { nextApi } from '@/lib/api/client'
 import { useToast } from '@/components/dashboard/Toast'
 
 interface GamificationOverview {
@@ -62,10 +62,10 @@ export default function AchievementsPage() {
       try {
         setLoading(true)
         const [badgesRes, earnedRes, certRes, overviewRes] = await Promise.all([
-          apiClient.get<{ success: boolean; data: Badge[] }>('/api/gamification/badges'),
-          apiClient.get<{ success: boolean; data: EarnedBadge[] }>('/api/gamification/badges/earned'),
-          apiClient.get<{ success: boolean; data: Certificate[] }>('/api/gamification/certificates'),
-          apiClient.get<{ success: boolean; data: GamificationOverview }>('/api/gamification/overview'),
+          nextApi.get<{ success: boolean; data: Badge[] }>('/api/gamification/badges'),
+          nextApi.get<{ success: boolean; data: EarnedBadge[] }>('/api/gamification/badges/earned'),
+          nextApi.get<{ success: boolean; data: Certificate[] }>('/api/gamification/certificates'),
+          nextApi.get<{ success: boolean; data: GamificationOverview }>('/api/gamification/overview'),
         ])
 
         if (!cancelled) {

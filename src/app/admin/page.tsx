@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/lib/api/client'
 import { Users, BookOpen, DollarSign, TrendingUp, Plus, LogOut, RefreshCw } from 'lucide-react'
 import { useToast } from '@/components/dashboard/Toast'
+import { nextApi } from '@/lib/api/client'
 import Link from 'next/link'
 
 interface AdminStats {
@@ -37,7 +38,7 @@ function AdminDashboardContent() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const result = await apiClient.get<{ success: boolean; data: { stats: AdminStats; recentEnrollments: RecentEnrollment[] } }>('/api/analytics/dashboard')
+      const result = await nextApi.get<{ success: boolean; data: { stats: AdminStats; recentEnrollments: RecentEnrollment[] } }>('/api/analytics/dashboard')
       if (result.success) {
         setStats(result.data.stats)
         setRecentEnrollments(result.data.recentEnrollments || [])
