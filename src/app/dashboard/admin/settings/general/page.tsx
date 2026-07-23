@@ -8,15 +8,20 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { Settings, Save, Sliders, Loader2, CheckCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { nextApi } from '@/lib/api/client'
+import { useToast } from '@/components/dashboard/Toast'
+
+const EMPTY_SETTINGS = {
+  allowInstructorRegistration: true,
+  autoApproveCourses: false,
+  commissionRate: 20,
+  notificationEmail: 'admin@profoundiqconsulting.com',
+}
 
 function GeneralSettingsPage() {
   const { user } = useAuth()
-  const [settings, setSettings] = useState({
-    allowInstructorRegistration: true,
-    autoApproveCourses: false,
-    commissionRate: 20,
-    notificationEmail: 'admin@profoundiqconsulting.com',
-  })
+  const { addToast } = useToast()
+  const [settings, setSettings] = useState(EMPTY_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -28,13 +33,12 @@ function GeneralSettingsPage() {
   const fetchSettings = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/settings/admin')
-      const result = await response.json()
-      if (result.success) {
-        setSettings(result.data)
-      }
+      const data = await nextApi.get<any>('/api/settings/admin')
+      const merged = { ...EMPTY_SETTINGS, ...(data?.data || {}) }
+      setSettings(merged)
     } catch (error) {
       console.error('Failed to fetch settings:', error)
+      addToast('error', 'Failed to load settings')
     } finally {
       setLoading(false)
     }
@@ -43,18 +47,15 @@ function GeneralSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true)
-      const response = await fetch('/api/settings/admin', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      })
-      const result = await response.json()
-      if (result.success) {
+      const result = await nextApi.put<any>('/api/settings/admin', settings)
+      if (result) {
         setShowSuccess(true)
         setTimeout(() => setShowSuccess(false), 3000)
+        addToast('success', 'Settings saved successfully')
       }
     } catch (error) {
       console.error('Failed to save settings:', error)
+      addToast('error', 'Failed to save settings')
     } finally {
       setSaving(false)
     }
@@ -153,7 +154,7 @@ function GeneralSettingsPage() {
                     <input
                       type="number"
                       value={settings.commissionRate}
-                      onChange={(e) => setSettings({ ...settings, commissionRate: parseInt(e.target.value) })}
+                      onChange={(e) => setSettings({ ...settings, commissionRate: parseInt(e.target.value) || 0 })}
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>

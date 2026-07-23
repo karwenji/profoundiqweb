@@ -8,18 +8,24 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { Settings, Save, Sliders, Loader2, CheckCircle, Globe } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { nextApi } from '@/lib/api/client'
+import { useToast } from '@/components/dashboard/Toast'
+
+const EMPTY_SETTINGS = {
+  maintenanceMode: false,
+  registrationEnabled: true,
+  maxUploadSizeMB: 50,
+  allowedFileTypes: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'mp4', 'zip'],
+  rateLimitWindowMs: 60000,
+  rateLimitMax: 100,
+  platformVersion: '1.0.0',
+  environment: 'development',
+}
 
 function SuperAdminGeneralSettingsPage() {
   const { user } = useAuth()
-  const [settings, setSettings] = useState({
-    siteName: 'Profound IQ Consulting',
-    supportEmail: 'support@profoundiqconsulting.com',
-    maxStudentsPerCourse: 500,
-    enableRegistration: true,
-    maintenanceMode: false,
-    defaultCurrency: 'NGN',
-    supportedCurrencies: ['NGN', 'USD', 'EUR', 'GBP'],
-  })
+  const { addToast } = useToast()
+  const [settings, setSettings] = useState(EMPTY_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -31,13 +37,13 @@ function SuperAdminGeneralSettingsPage() {
   const fetchSettings = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/settings/system')
-      const result = await response.json()
-      if (result.success) {
-        setSettings(result.data)
+      const result = await nextApi.get<any>('/api/settings/system')
+      if (result?.success && result.data) {
+        setSettings({ ...EMPTY_SETTINGS, ...result.data })
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error)
+      addToast('error', 'Failed to load system settings')
     } finally {
       setLoading(false)
     }
@@ -46,18 +52,15 @@ function SuperAdminGeneralSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true)
-      const response = await fetch('/api/settings/system', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      })
-      const result = await response.json()
-      if (result.success) {
+      const result = await nextApi.put<any>('/api/settings/system', settings)
+      if (result?.success) {
         setShowSuccess(true)
         setTimeout(() => setShowSuccess(false), 3000)
+        addToast('success', 'System settings saved successfully')
       }
     } catch (error) {
       console.error('Failed to save settings:', error)
+      addToast('error', 'Failed to save system settings')
     } finally {
       setSaving(false)
     }
@@ -125,33 +128,16 @@ function SuperAdminGeneralSettingsPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Site Name</label>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h4 className="font-semibold">Maintenance Mode</h4>
+                      <p className="text-sm text-gray-600">Temporarily disable the site for maintenance</p>
+                    </div>
                     <input
-                      type="text"
-                      value={settings.siteName}
-                      onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Support Email</label>
-                    <input
-                      type="email"
-                      value={settings.supportEmail}
-                      onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Max Students Per Course</label>
-                    <input
-                      type="number"
-                      value={settings.maxStudentsPerCourse}
-                      onChange={(e) => setSettings({ ...settings, maxStudentsPerCourse: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      type="checkbox"
+                      checked={settings.maintenanceMode}
+                      onChange={(e) => setSettings({ ...settings, maintenanceMode: e.target.checked })}
+                      className="h-5 w-5"
                     />
                   </div>
 
@@ -162,76 +148,52 @@ function SuperAdminGeneralSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.enableRegistration}
-                      onChange={(e) => setSettings({ ...settings, enableRegistration: e.target.checked })}
+                      checked={settings.registrationEnabled}
+                      onChange={(e) => setSettings({ ...settings, registrationEnabled: e.target.checked })}
                       className="h-5 w-5"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h4 className="font-semibold">Maintenance Mode</h4>
-                      <p className="text-sm text-gray-600">Temporarily disable the site</p>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Max Upload Size (MB)</label>
                     <input
-                      type="checkbox"
-                      checked={settings.maintenanceMode}
-                      onChange={(e) => setSettings({ ...settings, maintenanceMode: e.target.checked })}
-                      className="h-5 w-5"
+                      type="number"
+                      value={settings.maxUploadSizeMB}
+                      onChange={(e) => setSettings({ ...settings, maxUploadSizeMB: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
 
-                  <div className="pt-4 border-t">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <Globe className="h-5 w-5" />
-                      Currency Settings
-                    </h4>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Default Currency</label>
-                        <select
-                          value={settings.defaultCurrency}
-                          onChange={(e) => setSettings({ ...settings, defaultCurrency: e.target.value })}
-                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                        >
-                          <option value="NGN">NGN - Nigerian Naira</option>
-                          <option value="KES">KES - Kenya Shilling</option>
-                          <option value="USD">USD - US Dollar</option>
-                          <option value="EUR">EUR - Euro</option>
-                          <option value="GBP">GBP - British Pound</option>
-                        </select>
-                      </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Rate Limit Window (ms)</label>
+                    <input
+                      type="number"
+                      value={settings.rateLimitWindowMs}
+                      onChange={(e) => setSettings({ ...settings, rateLimitWindowMs: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
 
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Supported Currencies</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {['NGN', 'KES', 'USD', 'EUR', 'GBP'].map((currency) => (
-                            <label key={currency} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
-                              <input
-                                type="checkbox"
-                                checked={settings.supportedCurrencies.includes(currency)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSettings({
-                                      ...settings,
-                                      supportedCurrencies: [...settings.supportedCurrencies, currency],
-                                    })
-                                  } else {
-                                    setSettings({
-                                      ...settings,
-                                      supportedCurrencies: settings.supportedCurrencies.filter(c => c !== currency),
-                                    })
-                                  }
-                                }}
-                                className="h-4 w-4"
-                              />
-                              <span className="text-sm">{currency}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Max Requests Per Window</label>
+                    <input
+                      type="number"
+                      value={settings.rateLimitMax}
+                      onChange={(e) => setSettings({ ...settings, rateLimitMax: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Allowed File Types</label>
+                    <input
+                      type="text"
+                      value={settings.allowedFileTypes?.join(', ') || ''}
+                      onChange={(e) => setSettings({ ...settings, allowedFileTypes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                      placeholder="pdf, doc, jpg, png, mp4"
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Comma-separated file extensions</p>
                   </div>
 
                   <Button onClick={handleSave} className="w-full" disabled={saving}>

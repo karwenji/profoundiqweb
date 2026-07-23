@@ -8,16 +8,19 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { Webhook, Save, Copy, Check, Sliders, CreditCard, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { nextApi } from '@/lib/api/client'
+import { useToast } from '@/components/dashboard/Toast'
+
+const EMPTY_WEBHOOK_SETTINGS = {
+  paystack: { url: '', secret: '', events: ['charge.success', 'charge.failure'] },
+  flutterwave: { url: '', secret: '', events: ['charge.completed', 'charge.failed'] },
+  email: { url: '', secret: '', events: ['payment.confirmed', 'receipt.ready'] },
+}
 
 function WebhookSettingsPage() {
   const { user } = useAuth()
-  const [webhookSettings, setWebhookSettings] = useState({
-    callbackUrl: 'https://profoundiqconsulting.com/api/payment/callback',
-    webhookUrl: 'https://profoundiqconsulting.com/api/payment/webhook',
-    webhookSecret: 'whsec_xxxxxxxxxxxxxxxxxxxxxxxx',
-    enableInstantProcessing: true,
-    autoEnrollOnSuccess: true,
-  })
+  const { addToast } = useToast()
+  const [webhookSettings, setWebhookSettings] = useState<any>(EMPTY_WEBHOOK_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -30,13 +33,13 @@ function WebhookSettingsPage() {
   const fetchWebhookSettings = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/settings/webhooks')
-      const result = await response.json()
-      if (result.success) {
-        setWebhookSettings(result.data)
+      const result = await nextApi.get<any>('/api/settings/webhooks')
+      if (result?.success && result.data) {
+        setWebhookSettings({ ...EMPTY_WEBHOOK_SETTINGS, ...result.data })
       }
     } catch (error) {
       console.error('Failed to fetch webhook settings:', error)
+      addToast('error', 'Failed to load webhook settings')
     } finally {
       setLoading(false)
     }
@@ -54,24 +57,26 @@ function WebhookSettingsPage() {
     for (let i = 0; i < 32; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length))
     }
-    setWebhookSettings({ ...webhookSettings, webhookSecret: result })
+    setWebhookSettings({
+      ...webhookSettings,
+      paystack: { ...webhookSettings.paystack, secret: result },
+      flutterwave: { ...webhookSettings.flutterwave, secret: result },
+      email: { ...webhookSettings.email, secret: result },
+    })
   }
 
   const handleSave = async () => {
     try {
       setSaving(true)
-      const response = await fetch('/api/settings/webhooks', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(webhookSettings),
-      })
-      const result = await response.json()
-      if (result.success) {
+      const result = await nextApi.put<any>('/api/settings/webhooks', webhookSettings)
+      if (result?.success) {
         setShowSuccess(true)
         setTimeout(() => setShowSuccess(false), 3000)
+        addToast('success', 'Webhook settings saved successfully')
       }
     } catch (error) {
       console.error('Failed to save webhook settings:', error)
+      addToast('error', 'Failed to save webhook settings')
     } finally {
       setSaving(false)
     }
@@ -147,119 +152,82 @@ function WebhookSettingsPage() {
                 </div>
 
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Callback URL</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="url"
-                        value={webhookSettings.callbackUrl}
-                        onChange={(e) => setWebhookSettings({ ...webhookSettings, callbackUrl: e.target.value })}
-                        placeholder="https://yourdomain.com/api/payment/callback"
-                        className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(webhookSettings.callbackUrl, 'callback')}
-                      >
-                        {copiedField === 'callback' ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      URL where users are redirected after payment completion
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Webhook URL</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="url"
-                        value={webhookSettings.webhookUrl}
-                        onChange={(e) => setWebhookSettings({ ...webhookSettings, webhookUrl: e.target.value })}
-                        placeholder="https://yourdomain.com/api/payment/webhook"
-                        className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(webhookSettings.webhookUrl, 'webhook')}
-                      >
-                        {copiedField === 'webhook' ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      URL that receives payment status updates from payment gateways
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Webhook Secret Key</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="password"
-                        value={webhookSettings.webhookSecret}
-                        onChange={(e) => setWebhookSettings({ ...webhookSettings, webhookSecret: e.target.value })}
-                        placeholder="Webhook secret for signature verification"
-                        className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      <Button variant="outline" size="sm" onClick={generateWebhookSecret}>
-                        Generate
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(webhookSettings.webhookSecret, 'secret')}
-                      >
-                        {copiedField === 'secret' ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Secret key used to verify webhook signatures from payment providers
-                    </p>
-                  </div>
-
-                  <div className="space-y-3 pt-4 border-t">
-                    <h4 className="font-semibold text-sm">Instant Processing Options</h4>
-                    
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                  {Object.entries(webhookSettings).map(([provider, config]: [string, any]) => (
+                    <div key={provider} className="border rounded-lg p-4 space-y-4">
+                      <h4 className="font-semibold capitalize">{provider}</h4>
                       <div>
-                        <h5 className="font-medium text-sm">Enable Instant Processing</h5>
-                        <p className="text-xs text-gray-600">Process payments immediately upon webhook confirmation</p>
+                        <label className="block text-sm font-medium mb-2">Webhook URL</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            value={config.url}
+                            onChange={(e) => setWebhookSettings({
+                              ...webhookSettings,
+                              [provider]: { ...config, url: e.target.value },
+                            })}
+                            placeholder="https://yourdomain.com/api/webhooks/..."
+                            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(config.url, provider)}
+                          >
+                            {copiedField === provider ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={webhookSettings.enableInstantProcessing}
-                        onChange={(e) => setWebhookSettings({ ...webhookSettings, enableInstantProcessing: e.target.checked })}
-                        className="h-5 w-5"
-                      />
-                    </div>
 
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
-                        <h5 className="font-medium text-sm">Auto-Enroll on Success</h5>
-                        <p className="text-xs text-gray-600">Automatically enroll students after successful payment</p>
+                        <label className="block text-sm font-medium mb-2">Secret Key</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="password"
+                            value={config.secret}
+                            onChange={(e) => setWebhookSettings({
+                              ...webhookSettings,
+                              [provider]: { ...config, secret: e.target.value },
+                            })}
+                            placeholder="Webhook secret for signature verification"
+                            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <Button variant="outline" size="sm" onClick={generateWebhookSecret}>
+                            Generate
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(config.secret, `${provider}-secret`)}
+                          >
+                            {copiedField === `${provider}-secret` ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={webhookSettings.autoEnrollOnSuccess}
-                        onChange={(e) => setWebhookSettings({ ...webhookSettings, autoEnrollOnSuccess: e.target.checked })}
-                        className="h-5 w-5"
-                      />
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Subscribed Events</label>
+                        <input
+                          type="text"
+                          value={(config.events || []).join(', ')}
+                          onChange={(e) => setWebhookSettings({
+                            ...webhookSettings,
+                            [provider]: { ...config, events: e.target.value.split(',').map(s => s.trim()).filter(Boolean) },
+                          })}
+                          placeholder="e.g. charge.success, charge.failure"
+                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Comma-separated list of events to receive.</p>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
 
                 <Button onClick={handleSave} className="w-full mt-6" disabled={saving}>

@@ -8,23 +8,21 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { CreditCard, Save, Trash2, Plus, Sliders, Webhook, Loader2, CheckCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { nextApi } from '@/lib/api/client'
+import { useToast } from '@/components/dashboard/Toast'
 
 interface PaymentMethod {
   id: string
   name: string
-  type: 'paystack' | 'stripe' | 'paypal' | 'bank_transfer'
+  provider: string
   enabled: boolean
-  publicKey?: string
-  secretKey?: string
-  currency?: string
-  currencies?: string[]
-  accountDetails?: string
+  config: Record<string, string>
 }
 
 function PaymentSettingsPage() {
   const { user } = useAuth()
+  const { addToast } = useToast()
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
-  const availableCurrencies = ['NGN', 'KES', 'USD', 'EUR', 'GBP']
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -36,18 +34,15 @@ function PaymentSettingsPage() {
   const fetchPaymentMethods = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/settings/payments')
-      const result = await response.json()
-      if (result.success) {
-        // Ensure all payment methods have a currencies array
-        const normalizedMethods = result.data.map((method: PaymentMethod) => ({
-          ...method,
-          currencies: method.currencies && method.currencies.length > 0 ? method.currencies : ['NGN'],
-        }))
-        setPaymentMethods(normalizedMethods)
+      const result = await nextApi.get<any>('/api/settings/payments')
+      if (result?.success && Array.isArray(result.data.methods)) {
+        setPaymentMethods(result.data.methods)
+      } else if (Array.isArray(result?.data)) {
+        setPaymentMethods(result.data as PaymentMethod[])
       }
     } catch (error) {
       console.error('Failed to fetch payment methods:', error)
+      addToast('error', 'Failed to load payment methods')
     } finally {
       setLoading(false)
     }
@@ -56,18 +51,15 @@ function PaymentSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true)
-      const response = await fetch('/api/settings/payments', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ methods: paymentMethods }),
-      })
-      const result = await response.json()
-      if (result.success) {
+      const result = await nextApi.put<any>('/api/settings/payments', { methods: paymentMethods })
+      if (result?.success) {
         setShowSuccess(true)
         setTimeout(() => setShowSuccess(false), 3000)
+        addToast('success', 'Payment methods saved successfully')
       }
     } catch (error) {
       console.error('Failed to save payment methods:', error)
+      addToast('error', 'Failed to save payment methods')
     } finally {
       setSaving(false)
     }
@@ -145,11 +137,11 @@ function PaymentSettingsPage() {
                   <Button
                     onClick={() => {
                       const newMethod: PaymentMethod = {
-                        id: Date.now().toString(),
+                        id: `pm-${Date.now()}`,
                         name: '',
-                        type: 'paystack',
+                        provider: 'paystack',
                         enabled: false,
-                        currencies: ['NGN'],
+                        config: {},
                       }
                       setPaymentMethods([...paymentMethods, newMethod])
                     }}
@@ -165,121 +157,86 @@ function PaymentSettingsPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1 space-y-3">
                           <div>
-                            <label className="block text-sm font-medium mb-2">Supported Currencies</label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {availableCurrencies.map((currency) => (
-                                <label key={currency} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                  <input
-                                    type="checkbox"
-                                    checked={(method.currencies ?? []).includes(currency)}
-                                    onChange={(e) => {
-                                      setPaymentMethods(
-                                        paymentMethods.map((m) => {
-                                          if (m.id === method.id) {
-                                            const current = m.currencies ?? []
-                                            const newCurrencies = e.target.checked
-                                              ? [...current, currency]
-                                              : current.filter(c => c !== currency)
-                                            return { ...m, currencies: newCurrencies }
-                                          }
-                                          return m
-                                        })
-                                      )
-                                    }}
-                                    className="h-4 w-4"
-                                  />
-                                  <span className="text-sm">{currency}</span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Gateway Type</label>
-                            <select
-                              value={method.type}
+                            <label className="block text-sm font-medium mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={method.name}
                               onChange={(e) => {
                                 setPaymentMethods(
                                   paymentMethods.map((m) =>
-                                    m.id === method.id
-                                      ? { ...m, type: e.target.value as PaymentMethod['type'] }
-                                      : m
+                                    m.id === method.id ? { ...m, name: e.target.value } : m
+                                  )
+                                )
+                              }}
+                              placeholder="e.g. Paystack"
+                              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Provider</label>
+                            <select
+                              value={method.provider}
+                              onChange={(e) => {
+                                setPaymentMethods(
+                                  paymentMethods.map((m) =>
+                                    m.id === method.id ? { ...m, provider: e.target.value } : m
                                   )
                                 )
                               }}
                               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                               <option value="paystack">Paystack</option>
-                              <option value="stripe">Stripe</option>
-                              <option value="paypal">PayPal</option>
-                              <option value="bank_transfer">Bank Transfer</option>
+                              <option value="flutterwave">Flutterwave</option>
+                              <option value="manual">Cash / Bank Transfer</option>
                             </select>
                           </div>
 
-                          {method.type !== 'bank_transfer' && (
-                            <>
-                              <div>
-                                <label className="block text-sm font-medium mb-1">Public Key / Client ID</label>
-                                <input
-                                  type="text"
-                                  value={method.publicKey || ''}
-                                  onChange={(e) => {
-                                    setPaymentMethods(
-                                      paymentMethods.map((m) =>
-                                        m.id === method.id ? { ...m, publicKey: e.target.value } : m
-                                      )
-                                    )
-                                  }}
-                                  placeholder="Enter public key or client ID"
-                                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-medium mb-1">Secret Key</label>
-                                <input
-                                  type="password"
-                                  value={method.secretKey || ''}
-                                  onChange={(e) => {
-                                    setPaymentMethods(
-                                      paymentMethods.map((m) =>
-                                        m.id === method.id ? { ...m, secretKey: e.target.value } : m
-                                      )
-                                    )
-                                  }}
-                                  placeholder="Enter secret key"
-                                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-medium mb-1">Currency</label>
-                                <input
-                                  type="text"
-                                  value={method.currency || ''}
-                                  onChange={(e) => {
-                                    setPaymentMethods(
-                                      paymentMethods.map((m) =>
-                                        m.id === method.id ? { ...m, currency: e.target.value } : m
-                                      )
-                                    )
-                                  }}
-                                  placeholder="e.g., NGN, USD, EUR"
-                                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                              </div>
-                            </>
-                          )}
-
-                          {method.type === 'bank_transfer' && (
+                          <div className="grid md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium mb-1">Account Details</label>
-                              <textarea
-                                value={method.accountDetails || ''}
+                              <label className="block text-sm font-medium mb-1">Public Key / Client ID</label>
+                              <input
+                                type="text"
+                                value={method.config?.publicKey || method.config?.merchantId || ''}
                                 onChange={(e) => {
                                   setPaymentMethods(
                                     paymentMethods.map((m) =>
-                                      m.id === method.id ? { ...m, accountDetails: e.target.value } : m
+                                      m.id === method.id ? { ...m, config: { ...m.config, publicKey: e.target.value } } : m
+                                    )
+                                  )
+                                }}
+                                placeholder="Enter public key or client ID"
+                                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Secret Key</label>
+                              <input
+                                type="password"
+                                value={method.config?.secretKey || ''}
+                                onChange={(e) => {
+                                  setPaymentMethods(
+                                    paymentMethods.map((m) =>
+                                      m.id === method.id ? { ...m, config: { ...m.config, secretKey: e.target.value } } : m
+                                    )
+                                  )
+                                }}
+                                placeholder="Enter secret key"
+                                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                              />
+                            </div>
+                          </div>
+
+                          {method.provider === 'manual' && (
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Account Details</label>
+                              <textarea
+                                value={method.config?.accountDetails || ''}
+                                onChange={(e) => {
+                                  setPaymentMethods(
+                                    paymentMethods.map((m) =>
+                                      m.id === method.id ? { ...m, config: { ...m.config, accountDetails: e.target.value } } : m
                                     )
                                   )
                                 }}
