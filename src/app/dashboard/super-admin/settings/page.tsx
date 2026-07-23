@@ -102,7 +102,7 @@ function SuperAdminSettingsPage() {
                     <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
-                    {localSettings.currency.supported.map(curr => (
+                    {Array.from(new Set(localSettings.currency.supported)).map(curr => (
                       <SelectItem key={curr} value={curr}>{curr}</SelectItem>
                     ))}
                   </SelectContent>
