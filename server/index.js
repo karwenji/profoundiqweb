@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
 
 const authRoutes = require('./routes/auth');
 const courseRoutes = require('./routes/courses');
@@ -15,6 +16,8 @@ const progressRoutes = require('./routes/progress');
 const gamificationRoutes = require('./routes/gamification');
 const analyticsRoutes = require('./routes/analytics');
 const { router: eventsRouter } = require('./routes/events');
+const { wss } = require('./routes/communications-ws');
+const { messageLimiter, strictMessageLimiter } = require('./middleware/rateLimit');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,7 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/messages', messageRoutes);
+app.use('/api/messages', messageLimiter, messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/courses/:id/curriculum', curriculumRoutes);
@@ -43,6 +46,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+server.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

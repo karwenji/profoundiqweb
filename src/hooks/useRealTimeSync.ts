@@ -8,9 +8,13 @@ interface EventSourceWithReconnect extends EventSource {
   _maxReconnectAttempts: number
 }
 
-export function useRealTimeSync(eventHandlers: Record<string, (data: any) => void>, dependencies: unknown[] = []) {
+export interface RealTimeHandlers {
+  [event: string]: (data: any) => void
+}
+
+export function useRealTimeSync(eventHandlers: RealTimeHandlers, dependencies: unknown[] = []) {
   const eventSourceRef = useRef<EventSourceWithReconnect | null>(null)
-    const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
   const connect = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -27,13 +31,11 @@ export function useRealTimeSync(eventHandlers: Record<string, (data: any) => voi
 
     es.onopen = () => {
       es._reconnectAttempts = 0
-      console.log('[SSE] Connected')
     }
 
     es.onerror = () => {
       es._reconnectAttempts++
       if (es._reconnectAttempts >= es._maxReconnectAttempts) {
-        console.warn('[SSE] Max reconnection attempts reached, falling back to polling')
         es.close()
         return
       }

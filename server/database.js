@@ -252,6 +252,58 @@ db.exec(`
     FOREIGN KEY (course_id) REFERENCES courses(id)
   );
 
+  CREATE TABLE IF NOT EXISTS conversations (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL DEFAULT 'direct',
+    subject TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_conversations_type ON conversations(type, created_at);
+
+  CREATE TABLE IF NOT EXISTS message_reads (
+    id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(message_id, user_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_message_reads_user ON message_reads(user_id, read_at);
+
+  CREATE TABLE IF NOT EXISTS conversation_presences (
+    conversation_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    is_typing INTEGER DEFAULT 0,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (conversation_id, user_id),
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_conversation_presences ON conversation_presences(last_seen);
+
+  CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+    body,
+    subject,
+    content='messages',
+    content_rowid='rowid'
+  );
+
+  CREATE TRIGGER IF NOT EXISTS messages_ai AFTER INSERT ON messages BEGIN
+    INSERT INTO messages_fts(rowid, body, subject) VALUES (new.rowid, new.body, new.subject);
+  END;
+  CREATE TRIGGER IF NOT EXISTS messages_ad AFTER DELETE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, body, subject) VALUES('delete', old.rowid, old.body, old.subject);
+  END;
+  CREATE TRIGGER IF NOT EXISTS messages_au AFTER UPDATE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, body, subject) VALUES('delete', old.rowid, old.body, old.subject);
+    INSERT INTO messages_fts(rowid, body, subject) VALUES (new.rowid, new.body, new.subject);
+  END;
+
   CREATE INDEX IF NOT EXISTS idx_lessons_module ON lessons(module_id, order_index);
   CREATE INDEX IF NOT EXISTS idx_lesson_pages_lesson ON lesson_pages(lesson_id, page_number);
   CREATE INDEX IF NOT EXISTS idx_xp_user ON xp_transactions(user_id, created_at);
@@ -268,5 +320,11 @@ db.exec(`
   try { db.exec("ALTER TABLE enrollments ADD COLUMN total_xp INTEGER DEFAULT 0"); } catch (e) { /* column may exist */ }
   try { db.exec("ALTER TABLE enrollments ADD COLUMN level INTEGER DEFAULT 1"); } catch (e) { /* column may exist */ }
   try { db.exec("ALTER TABLE enrollments ADD COLUMN completed_at DATETIME"); } catch (e) { /* column may exist */ }
+  try { db.exec("ALTER TABLE messages ADD COLUMN conversation_id TEXT REFERENCES conversations(id)"); } catch (e) { /* column may exist */ }
+  try { db.exec("ALTER TABLE messages ADD COLUMN status TEXT DEFAULT 'sent'"); } catch (e) { /* column may exist */ }
+  try { db.exec("ALTER TABLE messages ADD COLUMN deleted_at DATETIME DEFAULT NULL"); } catch (e) { /* column may exist */ }
+  try { db.exec("ALTER TABLE messages ADD COLUMN deleted_by TEXT REFERENCES users(id)"); } catch (e) { /* column may exist */ }
+  try { db.exec("ALTER TABLE messages ADD COLUMN metadata TEXT DEFAULT '{}'"); } catch (e) { /* column may exist */ }
+  try { db.exec("ALTER TABLE notifications ADD COLUMN category TEXT DEFAULT 'general'"); } catch (e) { /* column may exist */ }
 
 module.exports = db;

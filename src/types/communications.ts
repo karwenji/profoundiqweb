@@ -67,6 +67,24 @@ export interface Announcement {
   created_at: string
 }
 
+export interface ReadReceipt {
+  message_id: string
+  user_id: string
+  read_at: string
+}
+
+export interface PresenceState {
+  conversation_id: string
+  user_id: string
+  is_typing: boolean
+  last_seen: string
+}
+
+export interface WSEvent {
+  type: string
+  data: Record<string, unknown>
+}
+
 export interface CommunicationsResponse<T> {
   success: boolean
   data: T

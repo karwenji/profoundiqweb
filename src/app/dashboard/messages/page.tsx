@@ -34,6 +34,8 @@ import {
   Inbox,
   PenSquare,
 } from 'lucide-react'
+import { useWebSocket } from '@/hooks/useWebSocket'
+import { TypingIndicator } from '@/components/dashboard/TypingIndicator'
 import type { Conversation, Message as MessageType, UserOption } from '@/types/communications'
 
 type RecipientMode = 'individual' | 'role' | 'course'
@@ -49,7 +51,9 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [messageSearch, setMessageSearch] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const replyInputRef = useRef<HTMLInputElement>(null)
 
   const [composeSubject, setComposeSubject] = useState('')
   const [composeBody, setComposeBody] = useState('')
@@ -61,6 +65,8 @@ export default function MessagesPage() {
   const [availableUsers, setAvailableUsers] = useState<UserOption[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [sentSuccess, setSentSuccess] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
   const api = useCallback(
     async (path: string, options: RequestInit = {}) => {
@@ -96,6 +102,43 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [threadMessages])
 
+  useWebSocket({
+    new_message: (data) => {
+      const msg = data.data as MessageType
+      if (selectedConversation && msg.conversation_id === selectedConversation) {
+        setThreadMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev
+          return [...prev, msg]
+        })
+      }
+      setConversations((prev) => {
+        const exists = prev.find((c) => c.id === (msg as any).conversation_id)
+        if (!exists && selectedConversation === (msg as any).conversation_id) {
+          return prev
+        }
+        return prev.map((c) =>
+          c.id === (msg as any).conversation_id ? { ...c, last_message: msg.body, last_message_at: msg.created_at, updated_at: msg.created_at } : c
+        )
+      })
+    },
+    user_typing: (data) => {
+      if (data.conversationId === selectedConversation) {
+        setIsTyping(true)
+      }
+    },
+    user_stop_typing: (data) => {
+      if (data.conversationId === selectedConversation) {
+        setIsTyping(false)
+      }
+    },
+  }, !!selectedConversation)
+
+  useEffect(() => {
+    if (!isTyping) return
+    const timer = setTimeout(() => setIsTyping(false), 3000)
+    return () => clearTimeout(timer)
+  }, [isTyping])
+
   const loadConversations = async () => {
     try {
       const data = await api('?resource=conversations')
@@ -109,8 +152,11 @@ export default function MessagesPage() {
 
   const loadThread = async (conversationId: string) => {
     try {
-      const data = await api(`?resource=messages&conversation_id=${conversationId}`)
+      const data = await api(`?resource=thread&conversation_id=${conversationId}`)
       setThreadMessages(data.data || [])
+      setSelectedConversation(conversationId)
+      setMode('inbox')
+      setMessageSearch('')
     } catch (e) {
       console.error(e)
     }
@@ -141,6 +187,12 @@ export default function MessagesPage() {
     setRecipientMode('individual')
     setSentSuccess(false)
   }
+
+  const sendTyping = useCallback((typing: boolean) => {
+    if (!selectedConversation || !token) return
+    const wsUrl = (process.env.NEXT_PUBLIC_WS_URL || '').replace(/^http/, 'ws') || new WebSocket('')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000'}/api/ws?token=${token}`)
+  }, [selectedConversation, token])
 
   const send = async () => {
     const messageBody = mode === 'compose' ? composeBody : reply
@@ -181,8 +233,8 @@ export default function MessagesPage() {
           if (newConversationId) setSelectedConversation(newConversationId)
         }, 800)
       } else if (selectedConversation) {
-        await api(
-          `?resource=messages&conversation_id=${selectedConversation}`,
+        const result = await api(
+          `?resource=thread&conversation_id=${selectedConversation}`,
           {
             method: 'POST',
             body: JSON.stringify({
@@ -193,8 +245,10 @@ export default function MessagesPage() {
           }
         )
         setReply('')
+        if (result.data) {
+          setThreadMessages((prev) => [...prev, result.data])
+        }
         loadConversations()
-        loadThread(selectedConversation)
       }
     } catch (e) {
       console.error(e)
@@ -209,6 +263,10 @@ export default function MessagesPage() {
       (c.subject ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.last_message ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const threadFiltered = messageSearch
+    ? threadMessages.filter((m) => m.body.toLowerCase().includes(messageSearch.toLowerCase()))
+    : threadMessages
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -275,7 +333,7 @@ export default function MessagesPage() {
                       className={`cursor-pointer transition-all hover:shadow-md ${
                         selectedConversation === conv.id ? 'border-primary bg-primary/5' : 'border-transparent'
                       }`}
-                      onClick={() => { setSelectedConversation(conv.id); setMode('inbox') }}
+                      onClick={() => loadThread(conv.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-1">
@@ -384,7 +442,7 @@ export default function MessagesPage() {
                       {recipientMode === 'course' && (
                         <div className="space-y-2">
                           <Label>Select Course</Label>
-                          <Select value={selectedCourseId} onValueChange={(val) => { setSelectedCourseId(val); setSelectedUserIds([]) }}>
+                          <Select value={selectedCourseId} onValueChange={(val) => { setSelectedCourseId(val); setSelectedUserIds([]); }}>
                             <SelectTrigger>
                               <SelectValue placeholder="Choose a course..." />
                             </SelectTrigger>
@@ -518,7 +576,7 @@ export default function MessagesPage() {
               ) : selectedConvo ? (
                 <Card className="flex-1 flex flex-col overflow-hidden">
                   <div className="p-4 border-b flex items-center gap-3 bg-gray-50">
-                    <Button variant="ghost" size="icon" onClick={() => setSelectedConversation(null)} className="lg:hidden">
+                    <Button variant="ghost" size="icon" onClick={() => { setSelectedConversation(null); setMode('inbox'); setThreadMessages([]) }} className="lg:hidden">
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -531,12 +589,23 @@ export default function MessagesPage() {
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
-                    {threadMessages.length === 0 ? (
+                    {messageSearch && (
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search messages..."
+                          value={messageSearch}
+                          onChange={(e) => setMessageSearch(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    )}
+                    {threadFiltered.length === 0 ? (
                       <div className="text-center py-12 text-gray-400">
                         <p>No messages in this conversation</p>
                       </div>
                     ) : (
-                      threadMessages.map((msg) => {
+                      threadFiltered.map((msg) => {
                         const isMine = msg.sender_id === user?.id
                         return (
                           <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
@@ -559,27 +628,32 @@ export default function MessagesPage() {
                         )
                       })
                     )}
+                    {selectedConversation && <TypingIndicator conversationId={selectedConversation} />}
                     <div ref={messagesEndRef} />
                   </div>
 
                   <div className="p-4 border-t bg-gray-50">
                     <div className="flex gap-2">
                       <Input
+                        ref={replyInputRef}
                         value={reply}
                         onChange={(e) => setReply(e.target.value)}
-                        placeholder="Type a reply..."
+                        onFocus={() => setIsTyping(true)}
+                        onBlur={() => setIsTyping(false)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault()
                             send()
                           }
                         }}
+                        placeholder="Type a reply..."
                         className="flex-1"
                       />
                       <Button onClick={send} disabled={sending || !reply.trim()}>
                         {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       </Button>
                     </div>
+                    {selectedConversation && <TypingIndicator conversationId={selectedConversation} />}
                   </div>
                 </Card>
               ) : (

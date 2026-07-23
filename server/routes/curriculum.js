@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const auth = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const { requirePermission, requireAnyPermission } = require('../middleware/permissions');
 const { v4: uuidv4 } = require('uuid');
 
@@ -18,7 +18,7 @@ function getPagesByLesson(lessonId) {
 }
 
 // GET /api/courses/:id/curriculum - Full curriculum tree
-router.get('/:id/curriculum', auth, (req, res) => {
+router.get('/:id/curriculum', authenticateToken, (req, res) => {
   try {
     const courseId = req.params.id;
     const modules = getCourseModules(courseId);
@@ -37,7 +37,7 @@ router.get('/:id/curriculum', auth, (req, res) => {
 });
 
 // POST /api/courses/:id/curriculum - Create module/lesson/page
-router.post('/:id/curriculum', auth, requireAnyPermission('manage_courses', 'create_courses'), (req, res) => {
+router.post('/:id/curriculum', authenticateToken, requireAnyPermission('manage_courses', 'create_courses'), (req, res) => {
   try {
     const courseId = req.params.id;
     const { action, data, moduleId, lessonId } = req.body;
@@ -85,7 +85,7 @@ router.post('/:id/curriculum', auth, requireAnyPermission('manage_courses', 'cre
 });
 
 // PUT /api/courses/:id/curriculum - Update module/lesson/page
-router.put('/:id/curriculum', auth, requireAnyPermission('manage_courses', 'edit_own_courses'), (req, res) => {
+router.put('/:id/curriculum', authenticateToken, requireAnyPermission('manage_courses', 'edit_own_courses'), (req, res) => {
   try {
     const courseId = req.params.id;
     const { action, data, moduleId, lessonId, pageId } = req.body;
@@ -125,7 +125,7 @@ router.put('/:id/curriculum', auth, requireAnyPermission('manage_courses', 'edit
 });
 
 // DELETE /api/courses/:id/curriculum
-router.delete('/:id/curriculum', auth, requireAnyPermission('manage_courses', 'edit_own_courses'), (req, res) => {
+router.delete('/:id/curriculum', authenticateToken, requireAnyPermission('manage_courses', 'edit_own_courses'), (req, res) => {
   try {
     const courseId = req.params.id;
     const { action, moduleId, lessonId, pageId } = req.body;

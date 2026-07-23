@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -14,7 +14,10 @@ import {
   Trash2,
   CheckCheck,
 } from 'lucide-react'
+import { useRealTimeSync } from '@/hooks/useRealTimeSync'
 import type { Notification } from '@/types/communications'
+
+type FilterType = 'all' | 'message' | 'announcement' | 'system' | 'enrollment' | 'payment' | 'approval'
 
 export default function NotificationsDropdown() {
   const { user } = useAuth()
@@ -22,24 +25,10 @@ export default function NotificationsDropdown() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [filter, setFilter] = useState<FilterType>('all')
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!user) return
-    load()
-    const interval = setInterval(load, 30_000)
-    return () => clearInterval(interval)
-  }, [user])
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false)
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const token = localStorage.getItem('token')
       const res = await fetch('/api/communications?resource=notifications', {
@@ -53,7 +42,33 @@ export default function NotificationsDropdown() {
     } catch (error) {
       console.error('Failed to load notifications', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    load()
+    const interval = setInterval(load, 15_000)
+    return () => clearInterval(interval)
+  }, [user, load])
+
+  useRealTimeSync({
+    new_notification: (data) => {
+      const notif = data as Notification
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === notif.id)) return prev
+        return [notif, ...prev]
+      })
+      setUnreadCount((prev) => (notif.is_read ? prev : prev + 1))
+    },
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const markAsRead = async (id: string) => {
     try {
@@ -103,7 +118,10 @@ export default function NotificationsDropdown() {
         body: JSON.stringify({ notification_id: id }),
       })
       setNotifications((prev) => prev.filter((n) => n.id !== id))
-      setUnreadCount((prev) => Math.max(0, prev - 1))
+      setUnreadCount((prev) => {
+        const n = notifications.find((x) => x.id === id)
+        return Math.max(0, prev - (n && !n.is_read ? 1 : 0))
+      })
     } catch (error) {
       console.error('Failed to delete notification', error)
     }
@@ -151,6 +169,8 @@ export default function NotificationsDropdown() {
     return date.toLocaleDateString()
   }
 
+  const filtered = filter === 'all' ? notifications : notifications.filter((n) => n.type === filter)
+
   if (!user) return null
 
   return (
@@ -178,7 +198,7 @@ export default function NotificationsDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border z-50 overflow-hidden">
           <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
             <div>
               <h3 className="font-bold text-gray-900">Notifications</h3>
@@ -208,18 +228,32 @@ export default function NotificationsDropdown() {
             </div>
           </div>
 
+          <div className="flex gap-1 p-2 border-b overflow-x-auto">
+            {(['all', 'message', 'announcement', 'system', 'enrollment', 'payment'] as FilterType[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`text-xs px-2.5 py-1 rounded-full capitalize whitespace-nowrap transition-colors ${
+                  filter === f ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {f === 'all' ? 'All' : f.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
-            ) : notifications.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No notifications</p>
               </div>
             ) : (
-              notifications.map((notif) => (
+              filtered.map((notif) => (
                 <div
                   key={notif.id}
                   className={`p-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${
@@ -252,8 +286,8 @@ export default function NotificationsDropdown() {
           </div>
 
           <div className="p-3 border-t bg-gray-50 text-center">
-            <Link href="/dashboard/messages" className="text-xs font-medium text-primary hover:underline" onClick={() => setIsOpen(false)}>
-              View all messages
+            <Link href="/dashboard/notifications" className="text-xs font-medium text-primary hover:underline" onClick={() => setIsOpen(false)}>
+              View all notifications
             </Link>
           </div>
         </div>

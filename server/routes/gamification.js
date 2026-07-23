@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const auth = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 const BADGE_DEFS = [
   { id: 'b-1', name: 'First Steps', description: 'Complete your first lesson', icon: 'Footprints', tier: 'bronze', category: 'milestone', criteria_type: 'lesson_count', criteria_threshold: 1, criteria_scope: 'course', xp_reward: 50, rarity: 10 },
@@ -22,7 +22,7 @@ function seedBadges() {
 seedBadges();
 
 // GET /api/gamification/badges
-router.get('/badges', auth, (req, res) => {
+router.get('/badges', authenticateToken, (req, res) => {
   try {
     const badges = db.prepare('SELECT * FROM badges ORDER BY tier, rarity').all();
     res.json({ success: true, data: badges });
@@ -32,7 +32,7 @@ router.get('/badges', auth, (req, res) => {
 });
 
 // GET /api/gamification/badges/earned
-router.get('/badges/earned', auth, (req, res) => {
+router.get('/badges/earned', authenticateToken, (req, res) => {
   try {
     const rows = db.prepare(`
       SELECT b.*, ub.earned_at, ub.course_id
@@ -48,7 +48,7 @@ router.get('/badges/earned', auth, (req, res) => {
 });
 
 // GET /api/gamification/xp/history
-router.get('/xp/history', auth, (req, res) => {
+router.get('/xp/history', authenticateToken, (req, res) => {
   try {
     const history = db.prepare('SELECT * FROM xp_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 100').all(req.user.id);
     res.json({ success: true, data: history });
@@ -58,7 +58,7 @@ router.get('/xp/history', auth, (req, res) => {
 });
 
 // GET /api/gamification/leaderboard
-router.get('/leaderboard', auth, (req, res) => {
+router.get('/leaderboard', authenticateToken, (req, res) => {
   try {
     const scope = req.query.scope || 'platform';
     const period = req.query.period || 'alltime';
@@ -108,7 +108,7 @@ router.get('/leaderboard', auth, (req, res) => {
 });
 
 // GET /api/gamification/streak
-router.get('/streak', auth, (req, res) => {
+router.get('/streak', authenticateToken, (req, res) => {
   try {
     const record = db.prepare('SELECT * FROM streak_records WHERE user_id = ?').get(req.user.id) || { current_streak: 0, longest_streak: 0, streak_freezes: 0, last_activity_date: null };
     res.json({ success: true, data: record });
@@ -118,7 +118,7 @@ router.get('/streak', auth, (req, res) => {
 });
 
 // GET /api/gamification/certificates
-router.get('/certificates', auth, (req, res) => {
+router.get('/certificates', authenticateToken, (req, res) => {
   try {
     const certs = db.prepare(`
       SELECT c.*, co.title as course_title, co.thumbnail as course_thumbnail
@@ -134,7 +134,7 @@ router.get('/certificates', auth, (req, res) => {
 });
 
 // GET /api/gamification/overview
-router.get('/overview', auth, (req, res) => {
+router.get('/overview', authenticateToken, (req, res) => {
   try {
     const totalXP = db.prepare('SELECT COALESCE(SUM(amount), 0) as total FROM xp_transactions WHERE user_id = ?').get(req.user.id).total;
     const level = Math.floor(Math.sqrt(totalXP / 100)) + 1;

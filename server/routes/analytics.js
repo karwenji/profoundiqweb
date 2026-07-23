@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const auth = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 
 // GET /api/analytics/dashboard
-router.get('/dashboard', auth, (req, res) => {
+router.get('/dashboard', authenticateToken, (req, res) => {
   try {
     const role = req.user.role;
     const userId = req.user.id;

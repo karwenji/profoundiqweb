@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const auth = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 // GET /api/notifications - Get user notifications
-router.get('/', auth, (req, res) => {
+router.get('/', authenticateToken, (req, res) => {
   try {
     const notifications = db.prepare(`
       SELECT * FROM notifications 
@@ -21,7 +21,7 @@ router.get('/', auth, (req, res) => {
 });
 
 // PATCH /api/notifications/:id/read - Mark notification as read
-router.patch('/:id/read', auth, (req, res) => {
+router.patch('/:id/read', authenticateToken, (req, res) => {
   try {
     db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?')
       .run(req.params.id, req.user.id);
@@ -32,7 +32,7 @@ router.patch('/:id/read', auth, (req, res) => {
 });
 
 // PATCH /api/notifications/read-all - Mark all notifications as read
-router.patch('/read-all', auth, (req, res) => {
+router.patch('/read-all', authenticateToken, (req, res) => {
   try {
     db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0')
       .run(req.user.id);
@@ -43,7 +43,7 @@ router.patch('/read-all', auth, (req, res) => {
 });
 
 // DELETE /api/notifications/:id - Delete a notification
-router.delete('/:id', auth, (req, res) => {
+router.delete('/:id', authenticateToken, (req, res) => {
   try {
     db.prepare('DELETE FROM notifications WHERE id = ? AND user_id = ?')
       .run(req.params.id, req.user.id);
@@ -54,7 +54,7 @@ router.delete('/:id', auth, (req, res) => {
 });
 
 // DELETE /api/notifications - Delete all read notifications for current user
-router.delete('/', auth, (req, res) => {
+router.delete('/', authenticateToken, (req, res) => {
   try {
     db.prepare('DELETE FROM notifications WHERE user_id = ? AND is_read = 1')
       .run(req.user.id);

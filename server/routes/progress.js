@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const auth = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 const { broadcast } = require('./events');
 
@@ -104,7 +104,7 @@ function updateStreak(userId) {
 }
 
 // GET /api/courses/:id/progress
-router.get('/:id/progress', auth, (req, res) => {
+router.get('/:id/progress', authenticateToken, (req, res) => {
   try {
     const progress = getOrCreateProgress(req.user.id, req.params.id);
     const modules = db.prepare('SELECT * FROM course_modules WHERE course_id = ? ORDER BY order_index ASC').all(req.params.id);
@@ -136,7 +136,7 @@ router.get('/:id/progress', auth, (req, res) => {
 });
 
 // POST /api/courses/:id/progress
-router.post('/:id/progress', auth, (req, res) => {
+router.post('/:id/progress', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
     const courseId = req.params.id;
