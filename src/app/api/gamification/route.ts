@@ -83,8 +83,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
 function decodeToken(token: string): string | undefined {
   try {
-    const decoded = JSON.parse(Buffer.from(token, 'base64').toString())
-    return decoded.userId
+    const payload = token.startsWith('fallback-') ? JSON.parse(Buffer.from(token.replace('fallback-', ''), 'base64').toString()) : JSON.parse(Buffer.from(token, 'base64').toString())
+    return payload.userId || payload.id
   } catch {
     return undefined
   }

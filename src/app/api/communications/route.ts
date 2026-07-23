@@ -19,15 +19,24 @@ import {
 import { getRolePermissions, hasPermission } from '@/lib/roles'
 import { users } from '@/lib/users'
 
+const FALLBACK_USERS = [
+  { id: 'u-1', name: 'Stephen Mwihaki', email: 'superadmin@profoundiqconsulting.com', role: 'super_admin' },
+  { id: 'u-2', name: 'Admin User', email: 'admin@profoundiqconsulting.com', role: 'admin' },
+  { id: 'u-3', name: 'Dr. Sarah Johnson', email: 'sarah@profoundiqconsulting.com', role: 'instructor' },
+  { id: 'u-4', name: 'John Student', email: 'student@profoundiqconsulting.com', role: 'student' },
+]
+
 function getCurrentUser(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
   if (!authHeader?.startsWith('Bearer ')) return null
   try {
     const token = authHeader.split(' ')[1]
-    const decoded = JSON.parse(atob(token))
-    const currentUser = users.find((u) => u.id === decoded.userId)
+    const payload = token.startsWith('fallback-') ? JSON.parse(Buffer.from(token.replace('fallback-', ''), 'base64').toString()) : JSON.parse(atob(token))
+    const userId = payload.userId || payload.id
+    if (!userId) return null
+    const currentUser = users.find((u) => u.id === userId) || FALLBACK_USERS.find((u) => u.id === userId)
     if (!currentUser) return null
-    return { id: currentUser.id, role: currentUser.role }
+    return { id: currentUser.id, role: currentUser.role, name: currentUser.name, email: currentUser.email }
   } catch {
     return null
   }
