@@ -3,6 +3,7 @@ import { getCourseModules, createCourseModule as repoCreateModule, updateCourseM
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    seedCourseWorkflowData()
     const { id: courseId } = await params
     const modules = getCourseModules(courseId)
     const modulesWithLessons = modules.map(m => ({

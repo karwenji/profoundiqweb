@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOrCreateLearnerProgress, getModuleProgress, updateLearnerProgress, getCourseModules, getLessonsByModule, getPageById, getLessonById, getModulesWithLessons } from '@/lib/courseWorkflow'
+import { getOrCreateLearnerProgress, getModuleProgress, updateLearnerProgress, getCourseModules, getLessonsByModule, getPageById, getLessonById, getModulesWithLessons, seedCourseWorkflowData } from '@/lib/courseWorkflow'
 import { addXPTransaction, calculateXPForAction, calculateLevel, checkBadgeEligibility, updateStreak } from '@/lib/gamification/xp'
 import { users } from '@/lib/users'
 import type { Badge, PageCompletionPayload, PageCompletionResult, XPContext } from '@/types/courseWorkflow'
@@ -11,6 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!userId) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
     const { id: courseId } = await params
+    seedCourseWorkflowData()
     const progress = getOrCreateLearnerProgress(userId, courseId)
     const modules = getModulesWithLessons(courseId)
 
