@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCourseModules, createCourseModule as repoCreateModule, updateCourseModule as repoUpdateModule, deleteCourseModule as repoDeleteModule, getLessonsByModule, createLesson as repoCreateLesson, updateLesson as repoUpdateLesson, deleteLesson as repoDeleteLesson, getPagesByLesson, createLessonPage as repoCreatePage, updateLessonPage as repoUpdatePage, deleteLessonPage as repoDeletePage, getLessonById, seedCourseWorkflowData } from '@/lib/courseWorkflow'
+import { getGates, evaluateGate, getRemediationContent } from '@/lib/courseBuilder'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     seedCourseWorkflowData()
     const { id: courseId } = await params
+    const { searchParams } = new URL(request.url)
+    const includeGating = searchParams.get('gating') === 'true'
+    const userId = searchParams.get('userId')
+
     const modules = getCourseModules(courseId)
     const modulesWithLessons = modules.map(m => ({
       ...m,
@@ -13,7 +18,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         pages: getPagesByLesson(l.id),
       })),
     }))
-    return NextResponse.json({ success: true, data: modulesWithLessons })
+
+    let gatingInfo: Record<string, { passed: boolean; missingSource: boolean; remediation?: ReturnType<typeof getRemediationContent> }> = {}
+    if (includeGating && userId) {
+      const courseGates = getGates(courseId)
+      const learnerProgress: Record<string, number> = {}
+      courseGates.forEach(gate => {
+        const result = evaluateGate(gate, learnerProgress)
+        gatingInfo[gate.lessonId || gate.moduleId || gate.id] = {
+          ...result,
+          remediation: result.passed ? undefined : getRemediationContent(gate),
+        }
+      })
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: modulesWithLessons,
+      meta: { gating: includeGating ? gatingInfo : undefined },
+    })
   } catch (error) {
     return NextResponse.json({ success: false, error: 'Failed to fetch curriculum' }, { status: 500 })
   }

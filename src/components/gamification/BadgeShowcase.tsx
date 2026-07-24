@@ -6,16 +6,16 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Badge as BadgeType } from '@/types/courseWorkflow'
 
-const tierOrder: Record<string, number> = { bronze: 0, silver: 1, gold: 2, platinum: 3 }
+const tierOrder: Record<BadgeType['tier'], number> = { bronze: 0, silver: 1, gold: 2, platinum: 3 }
 
-const tierStyles = {
+const tierStyles: Record<BadgeType['tier'], string> = {
   bronze: 'border-orange-200 bg-orange-50',
   silver: 'border-gray-300 bg-gray-50',
   gold: 'border-yellow-300 bg-yellow-50',
   platinum: 'border-purple-300 bg-purple-50',
 }
 
-const tierColors = {
+const tierColors: Record<BadgeType['tier'], string> = {
   bronze: 'text-orange-600',
   silver: 'text-gray-600',
   gold: 'text-yellow-600',

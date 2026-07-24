@@ -1,5 +1,10 @@
 export type ContentType = 'video' | 'text' | 'quiz' | 'assignment' | 'reflection'
+export type ContentBlockType = 'text' | 'video' | 'audio' | 'image' | 'quiz' | 'assignment' | 'reflection_prompt' | 'checkpoint' | 'sandbox' | 'simulation'
 export type UnlockRule = 'sequential' | 'all_open' | 'prerequisite'
+export type GateType = 'score' | 'time' | 'manual'
+export type QuestionType = 'mc' | 'ma' | 'true_false' | 'drag_drop' | 'numeric' | 'file_upload' | 'video_response' | 'voice_response'
+export type PathwayCondition = 'score_below' | 'score_above' | 'confidence_low' | 'competency_gap' | 'time_exceeded'
+export type ComprehensionLevel = 'none' | 'low' | 'medium' | 'high'
 export type XPTransactionSource =
   | 'lesson_complete'
   | 'module_complete'
@@ -10,11 +15,169 @@ export type XPTransactionSource =
   | 'streak_bonus'
   | 'peer_help'
   | 'admin_adjustment'
-
 export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'platinum'
 export type BadgeCategory = 'milestone' | 'consistency' | 'mastery' | 'social' | 'special'
 export type LeaderboardScope = 'course' | 'platform'
 export type LeaderboardPeriod = 'week' | 'alltime'
+
+export interface ContentBlock {
+  id: string
+  lessonId: string
+  moduleId: string
+  courseId: string
+  blockType: ContentBlockType
+  title: string
+  content: string
+  mediaUrl?: string
+  mediaType?: 'video' | 'audio' | 'image' | 'document'
+  competencyTags: string[]
+  order: number
+  supportsScaffolding: boolean
+  scaffoldLayers: ScaffoldLayer[]
+  minDwellSeconds: number
+  checkpointConfig?: CheckpointConfig
+  reflectionConfig?: ReflectionConfig
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ScaffoldLayer {
+  id: string
+  label: 'core' | 'reinforce' | 'enrich'
+  content: string
+  condition?: ComprehensionLevel
+}
+
+export interface CheckpointConfig {
+  id: string
+  question: string
+  questionType: QuestionType
+  options?: { id: string; text: string; isCorrect: boolean }[]
+  correctAnswer?: string | string[]
+  passageageThreshold: number
+  masteryThreshold: number
+  feedbackCorrect: string
+  feedbackIncorrect: string
+  allowRetry: boolean
+  maxAttempts: number
+  competencyTags: string[]
+}
+
+export interface ReflectionConfig {
+  prompt: string
+  minWordCount: number
+  rubricId?: string
+  allowAnonymous: boolean
+}
+
+export interface Competency {
+  id: string
+  courseId: string
+  code: string
+  label: string
+  description: string
+  taxonomyLevel: 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create'
+  weight: number
+  parentId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Assessment {
+  id: string
+  courseId: string
+  moduleId?: string
+  lessonId?: string
+  title: string
+  description: string
+  type: 'checkpoint' | 'module_quiz' | 'final_exam'
+  isAdaptive: boolean
+  irtStartingDifficulty: number
+  masteryThreshold: number
+  maxAttempts: number
+  cooldownMinutes: number
+  timeLimitMinutes?: number
+  questionPoolIds: string[]
+  passageageThreshold: number
+  showFeedbackImmediately: boolean
+  randomizeOrder: boolean
+  isPublished: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Question {
+  id: string
+  assessmentId: string
+  courseId: string
+  questionType: QuestionType
+  prompt: string
+  explanation: string
+  difficulty: number
+  options: { id: string; text: string; isCorrect: boolean }[]
+  correctAnswer?: string | string[]
+  competencyTags: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PrerequisiteGate {
+  id: string
+  courseId: string
+  moduleId?: string
+  lessonId?: string
+  gateType: GateType
+  threshold: number
+  unitId: string
+  unitType: 'module' | 'lesson'
+  remediationContentBlockIds: string[]
+  isPublished: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PathwayRule {
+  id: string
+  courseId: string
+  name: string
+  description: string
+  isActive: boolean
+  conditions: PathwayCondition[]
+  sourceUnitId: string
+  sourceUnitType: 'module' | 'lesson' | 'checkpoint'
+  trueBranchId: string
+  falseBranchId: string
+  priority: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SpacedReviewItem {
+  id: string
+  userId: string
+  courseId: string
+  contentType: 'module' | 'lesson' | 'checkpoint'
+  contentId: string
+  nextReviewAt: string
+  intervalDays: number
+  easeFactor: number
+  repetitions: number
+  lastReviewedAt?: string
+  masteryScore: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CompetencyMastery {
+  userId: string
+  courseId: string
+  competencyId: string
+  masteryScore: number
+  attempts: number
+  lastAttemptAt: string
+  evidenceCount: number
+  trend: 'improving' | 'stable' | 'declining'
+}
 
 export interface CourseModule {
   id: string

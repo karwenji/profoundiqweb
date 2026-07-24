@@ -24,6 +24,9 @@ import {
   ChevronRight,
   Share2,
   DollarSign,
+  Wand2,
+  Brain,
+  Award,
 } from 'lucide-react'
 import { useState, useMemo, ReactNode } from 'react'
 import { getRolePermissions, hasPermission } from '@/lib/roles'
@@ -31,13 +34,15 @@ import { getRolePermissions, hasPermission } from '@/lib/roles'
 interface NavItem {
   label: string
   href: string
+  iconComponent?: React.ElementType
   permission?: string
   subItems?: NavItem[]
 }
 
 interface NavGroup {
   label: string
-  icon: ReactNode
+  icon: React.ReactNode
+  iconComponent?: React.ElementType
   items: NavItem[]
 }
 
@@ -89,9 +94,17 @@ const navGroups: NavGroup[] = [
     label: 'Course Creation',
     icon: <FileText className="h-5 w-5" />,
     items: [
-      { label: 'My Courses', href: '/dashboard/instructor/courses', permission: 'view_students' },
+      { label: 'Create Course Wizard', href: '/dashboard/instructor/create-wizard', permission: 'create_courses' },
+      { label: 'My Courses', href: '/dashboard/instructor/courses', permission: 'edit_own_courses' },
       { label: 'Create Course', href: '/dashboard/instructor/create', permission: 'create_courses' },
-      { label: 'Students', href: '/dashboard/instructor/students', permission: 'view_students' },
+    ],
+  },
+  {
+    label: 'Course Management (Admin)',
+    icon: <BookOpen className="h-5 w-5" />,
+    items: [
+      { label: 'Manage Courses', href: '/dashboard/admin/courses', permission: 'manage_courses' },
+      { label: 'Create Course', href: '/dashboard/admin/courses/create', permission: 'manage_courses' },
     ],
   },
   {
@@ -131,6 +144,8 @@ const navGroups: NavGroup[] = [
     icon: <User className="h-5 w-5" />,
     items: [
       { label: 'Profile', href: '/dashboard/profile' },
+      { label: 'My Competencies', href: '/dashboard/student/competencies', iconComponent: Award },
+      { label: 'Spaced Review', href: '/dashboard/student/spaced-review', iconComponent: Brain },
       { label: 'Support', href: '/dashboard/support' },
     ],
   },
@@ -190,7 +205,7 @@ function NavGroupItem({ group, pathname, expandedGroups, toggleGroup, onNavigate
         <div className="ml-4 mt-1 space-y-1 border-l border-gray-200 pl-3">
           {visibleItems.map((item) => {
             const itemActive = pathname === item.href || pathname.startsWith(item.href + '/')
-            const subItems = (item as NavItem & { subItems?: NavItem[] }).subItems
+            const subItems = item.subItems
 
             return (
               <div key={item.href}>
